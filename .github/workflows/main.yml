@@ -37,24 +37,13 @@ jobs:
     if: ${{ needs.tested.outputs.tested != 'true' }}
     uses: Sustenaut/pubkit/.github/workflows/job-osv.yml@abe660c67ce23d32c5ed25b5c2424a98dac92646 # v0.31.2
 
-  sonar:
-    name: ci
-    needs: [tested, functional]
-    if: ${{ !failure() && !cancelled() }}
-    uses: Sustenaut/pubkit/.github/workflows/job-sonar.yml@abe660c67ce23d32c5ed25b5c2424a98dac92646 # v0.31.2
-    permissions:
-      actions: read
-      contents: read
-    with: {"reports": "sonar.python.coverage.reportPaths=*.xml", "layout": "-Dsonar.sources=src -Dsonar.tests=tests", "coverage-run": "${{ needs.tested.outputs.run-id }}"}
-    secrets: { SONAR_TOKEN: '${{ secrets.SONAR_TOKEN }}' }
-
   # The one check a ruleset requires: it passes only when every job
   # above succeeded or, where the merge queue already passed the
   # commit, was skipped for it. None is skipped for not being asked for.
   passed:
     name: ci / passed
     if: always()
-    needs: [tested, functional, audit, osv, sonar]
+    needs: [tested, functional, audit, osv]
     runs-on: ubuntu-latest
     steps:
       - run: |

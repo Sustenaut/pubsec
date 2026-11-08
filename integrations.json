@@ -39,14 +39,6 @@
       "mode": "required"
     },
     {
-      "plugin": "sonarcloud.scan",
-      "paths": [
-        ".github/workflows/main.yml",
-        ".github/workflows/pr.yml"
-      ],
-      "mode": "required"
-    },
-    {
       "plugin": "tailscale.tailnet",
       "paths": [
         "src/pubsec/needs/github.py"

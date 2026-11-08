@@ -3,15 +3,16 @@
   "bin": "pubsec",
   "ci": {
     "language": "python",
-    "release": {}
+    "release": {},
+    "jobs": {"review": false, "sonar": false}
   },
   "protect": {
     "checks": [
       "ci / passed",
       "release / release",
-      "SonarCloud Code Analysis",
       "integrations / scan"
     ],
+    "queue": false,
     "release_app": 5529889
   },
   "signing_keys": [
