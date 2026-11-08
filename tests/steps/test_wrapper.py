@@ -1,0 +1,162 @@
+"""Steps for `pubsec run`, run as a person would, against a stand-in for the
+bws CLI that serves fake secrets from a JSON file."""
+
+from __future__ import annotations
+
+import json
+import os
+
+import pytest
+from conftest import pubsec
+from pytest_bdd import given, parsers, scenarios, then, when
+
+scenarios("wrapper.feature")
+
+BWS = """#!/bin/sh
+[ "$BWS_ACCESS_TOKEN" = "tok" ] || { echo "invalid token" >&2; exit 1; }
+case "$1 $2" in
+"project list") cat "$FAKE_BWS/projects.json" ;;
+"secret list") if [ "$3" = "$(cat "$FAKE_BWS/project_id")" ]; then cat "$FAKE_BWS/secrets.json"; else echo "[]"; fi ;;
+*) exit 2 ;;
+esac
+"""
+
+SHOW = """#!/bin/sh
+env > "$SHOW_ENV"
+pwd > "$SHOW_ENV.cwd"
+"""
+
+
+@pytest.fixture
+def fake(tmp_path):
+    root = tmp_path / "fake"
+    (root / "bin").mkdir(parents=True)
+    bws = root / "bin" / "bws"
+    bws.write_text(BWS)
+    bws.chmod(0o755)
+    show = root / "show"
+    show.write_text(SHOW)
+    show.chmod(0o755)
+    (root / "projects.json").write_text("[]")
+    (root / "project_id").write_text("")
+    (root / "secrets.json").write_text("[]")
+    return root
+
+
+def service_repo(repo, project):
+    (repo / "with-secrets.json").write_text(json.dumps({"project": project,
+                                                        "terraform": {"dir": ".", "secrets": "declared"}}))
+
+
+@given(parsers.parse('a service whose Terraform declares "{variable}"'))
+def declares(repo, variable):
+    service_repo(repo, "infra")
+    (repo / "variables.tf").write_text(f'variable "{variable}" {{\n  sensitive = true\n}}\n')
+
+
+@given(parsers.parse('a service whose Terraform takes its secrets as a map of "{name}"'))
+def as_map(repo, name):
+    service_repo(repo, "infra")
+    (repo / "infra").mkdir()
+    (repo / "infra" / "secrets.tf").write_text(
+        f'locals {{\n  secrets = {{\n    "{name}" = "a key",\n  }}\n}}\n')
+    settings = json.loads((repo / "with-secrets.json").read_text())
+    settings["terraform"] = {"dir": "infra", "secrets": "map", "names_from": "infra/secrets.tf"}
+    (repo / "with-secrets.json").write_text(json.dumps(settings))
+
+
+@given(parsers.parse('the aliases file "{path}" maps "{alias}" to "{secret}"'))
+def aliases_file(repo, path, alias, secret):
+    (repo / path).parent.mkdir(parents=True, exist_ok=True)
+    (repo / path).write_text(json.dumps({"comment": "test", "aliases": {alias: secret}}))
+    settings = json.loads((repo / "with-secrets.json").read_text())
+    settings["aliases"] = [path]
+    (repo / "with-secrets.json").write_text(json.dumps(settings))
+
+
+def _holds(fake, project, pairs):
+    (fake / "projects.json").write_text(json.dumps([{"id": f"id-{project}", "name": project}]))
+    (fake / "project_id").write_text(f"id-{project}")
+    when = "2026-10-13T11:00:00.123Z"
+    (fake / "secrets.json").write_text(json.dumps(
+        [{"key": key, "value": value, "revisionDate": when} for key, value in pairs]))
+
+
+@given(parsers.parse('Bitwarden holds "{k1}" as "{v1}" and "{k2}" as "{v2}" in the project "{project}"'))
+def holds(fake, k1, v1, k2, v2, project):
+    _holds(fake, project, [(k1, v1), (k2, v2)])
+
+
+@given(parsers.parse('Bitwarden holds "{k1}" as "{v1}" and "{k2}" as "{v2}" and "{k3}" as "{v3}" '
+                     'in the project "{project}"'))
+def holds_three(fake, k1, v1, k2, v2, k3, v3, project):
+    _holds(fake, project, [(k1, v1), (k2, v2), (k3, v3)])
+
+
+def _wrapper(repo, run, fake, env, runner, *command):
+    env = {"PATH": f"{fake / 'bin'}:{os.environ['PATH']}", "FAKE_BWS": str(fake),
+           "SHOW_ENV": str(fake / "seen.env"), **env}
+    program, *args = runner.split(" ")
+    assert program == "pubsec", runner
+    return run(pubsec(), *args, "--", *command, cwd=repo, env=env)
+
+
+@when(parsers.parse('I run "{runner}" with the token "{token}"'), target_fixture="result")
+def with_token(repo, run, fake, runner, token):
+    (repo / "infra").mkdir(exist_ok=True)
+    return _wrapper(repo, run, fake, {"BWS_ACCESS_TOKEN": token}, runner, fake / "show")
+
+
+@when(parsers.parse('I run "{runner}" with no token'), target_fixture="result")
+def no_token(repo, run, fake, runner):
+    return _wrapper(repo, run, fake, {"BWS_ACCESS_TOKEN": None}, runner, fake / "show")
+
+
+@when(parsers.parse('I run "{runner}" with the token "{token}" and a command that exits {code:d}'),
+      target_fixture="result")
+def exits(repo, run, fake, runner, token, code):
+    return _wrapper(repo, run, fake, {"BWS_ACCESS_TOKEN": token}, runner, "sh", "-c", f"exit {code}")
+
+
+@when(parsers.parse('I run "{runner}" with the token "{token}" and the command "{command}"'),
+      target_fixture="result")
+def missing_command(repo, run, fake, runner, token, command):
+    return _wrapper(repo, run, fake, {"BWS_ACCESS_TOKEN": token}, runner, command)
+
+
+@given(parsers.parse('the repository has no "{path}"'))
+def removed(repo, path):
+    (repo / path).unlink()
+
+
+@then(parsers.parse('the command ran in "{directory}"'))
+def ran_in(repo, fake, directory):
+    assert (fake / "seen.env.cwd").read_text().strip() == str(repo / directory)
+
+
+def _seen(fake) -> dict[str, str]:
+    out = {}
+    for line in (fake / "seen.env").read_text().splitlines():
+        key, _, value = line.partition("=")
+        out[key] = value
+    return out
+
+
+@then(parsers.parse('the command sees "{name}" as "{value}"'))
+def sees(fake, name, value):
+    assert _seen(fake).get(name) == value, _seen(fake).get(name)
+
+
+@then(parsers.parse('the command does not see "{name}"'))
+def does_not_see(fake, name):
+    assert name not in _seen(fake)
+
+
+@then("the calling shell's environment is unchanged")
+def unchanged():
+    assert "TF_VAR_hcloud_token" not in os.environ and "RESTIC_PASSWORD" not in os.environ
+
+
+@then("the command did not run")
+def did_not_run(fake):
+    assert not (fake / "seen.env").exists()

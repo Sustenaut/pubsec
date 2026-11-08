@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pubsec"
+version = "0.1.0"
+description = "The commands and deploy need types that hold a secret value, a write token or a private key, apart from pubkit."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "David Schryer", email = "schryer@gmail.com" }]
+# None: Bitwarden's SDK is installed per run, by hash, from bitwarden-sdk.lock,
+# by the commands that write (bitwarden.py), and bws and gcloud are programs.
+dependencies = []
+
+[project.urls]
+Repository = "https://github.com/Sustenaut/pubsec"
+
+[project.scripts]
+pubsec = "pubsec.cli:main"
+
+# Each an instance, which pubkit's walk calls, never a class.
+[project.entry-points."sustenaut.needs"]
+bitwarden-secret = "pubsec.needs.bitwarden:bitwarden_secret"
+bitwarden-generated = "pubsec.needs.bitwarden:bitwarden_generated"
+gcp-service-account-key = "pubsec.needs.gcp:service_account_key"
+github-secret = "pubsec.needs.github:github_secret"
+github-variable = "pubsec.needs.github:github_variable"
+github-deploy-settings = "pubsec.needs.github:deploy_settings"
+k8s-secret = "pubsec.needs.k8s:secret"
+
+[project.entry-points."sustenaut.walk"]
+bitwarden = "pubsec.walk:prepare"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+pubsec = ["bitwarden-sdk.lock"]
+
+# `make functional` measures the suite, the `pubsec` processes it starts
+# included, into coverage/coverage.xml for SonarQube Cloud.
+[tool.coverage.run]
+source = ["pubsec"]
+patch = ["subprocess", "execv"]
+parallel = true
+
+[tool.coverage.xml]
+output = "coverage/coverage.xml"
