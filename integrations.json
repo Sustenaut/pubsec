@@ -23,6 +23,7 @@
     {
       "plugin": "github.repo-ops",
       "paths": [
+        ".github/workflows/wheel.yml",
         "src/pubsec/app_secrets.py",
         "src/pubsec/github_app.py",
         "src/pubsec/needs/"
