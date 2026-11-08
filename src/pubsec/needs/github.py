@@ -19,7 +19,9 @@ GITHUB_NAME = {"type": "string", "pattern": r"^(?!GITHUB_)[A-Z_][A-Z0-9_]*$",
 FROM = {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9_.-]*$", "x-phrase": "must be a secret's name"}
 ENVIRONMENT = {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",
                "x-phrase": "must be an environment's name"}
-# The names the server's deploy job reads, and how each is kept on GitHub.
+# The names the server's deploy job reads, and how each is kept on GitHub. pubkit
+# keeps the same table (pubkit/deploy/implied.py, DEPLOY_SETTINGS), which implies
+# this need from it: a change to one is made in both.
 DEPLOY_SETTINGS = {"SUSTENAUT_SERVER": "variable", "SUSTENAUT_KNOWN_HOSTS": "variable",
                    "SUSTENAUT_DEPLOY_SSH_KEY": "secret", "TS_GH_OAUTH_CLIENT_ID": "secret",
                    "TS_GH_OAUTH_SECRET": "secret"}
