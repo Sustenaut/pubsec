@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "pubsec, the commands and deploy need types that hold a secret value, a write token or a private key, apart from pubkit: pubsec run (what ./with-secrets runs), app-secrets, github-app create, service-account-key create and signing-key backup, moved from pubkit with their behaviour; the need types bitwarden.secret, bitwarden.generated, gcp.service-account-key, github.secret, github.variable, github.deploy-settings and k8s.secret, offered to pubkit's walk by sustenaut.needs entry points and coded against its provider contract alone; and the sustenaut.walk hook that asks for the Bitwarden write token. A secret to write is found by name among the identifiers Bitwarden's SDK lists, without its value, where pubkit used bws secret list, which gives every value of the project"
-}

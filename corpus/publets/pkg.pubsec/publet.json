@@ -1,0 +1,99 @@
+{
+  "claims": {
+    "identity": {
+      "class": "archival",
+      "content": "pubsec 0.1.0 is released as v0.1.0 from commit a8b9f926514aace8a6f51e8acc2ecc1b2ab05cba.",
+      "data": {
+        "columns": [
+          {
+            "name": "name"
+          },
+          {
+            "name": "version"
+          },
+          {
+            "name": "check"
+          },
+          {
+            "name": "expect"
+          },
+          {
+            "name": "tag"
+          },
+          {
+            "name": "commit"
+          }
+        ],
+        "rows": [
+          [
+            "pubsec",
+            "0.1.0",
+            "pubsec --version",
+            "pubsec 0.1.0",
+            "v0.1.0",
+            "a8b9f926514aace8a6f51e8acc2ecc1b2ab05cba"
+          ]
+        ]
+      },
+      "scope": "the published release v0.1.0 of pubsec",
+      "sources": [
+        {
+          "ref": "pubsec",
+          "revision": "a8b9f926514aace8a6f51e8acc2ecc1b2ab05cba"
+        }
+      ]
+    },
+    "release": {
+      "class": "archival",
+      "content": "pubsec 0.1.0 was released on 2026-11-08 from commit a8b9f926514aace8a6f51e8acc2ecc1b2ab05cba with these changes.",
+      "data": {
+        "columns": [
+          {
+            "name": "category"
+          },
+          {
+            "name": "change"
+          }
+        ],
+        "rows": [
+          [
+            "added",
+            "pubsec, the commands and deploy need types that hold a secret value, a write token or a private key, apart from pubkit: pubsec run (what ./with-secrets runs), app-secrets, github-app create, service-account-key create and signing-key backup, moved from pubkit with their behaviour; the need types bitwarden.secret, bitwarden.generated, gcp.service-account-key, github.secret, github.variable, github.deploy-settings and k8s.secret, offered to pubkit's walk by sustenaut.needs entry points and coded against its provider contract alone; and the sustenaut.walk hook that asks for the Bitwarden write token. A secret to write is found by name among the identifiers Bitwarden's SDK lists, without its value, where pubkit used bws secret list, which gives every value of the project"
+          ]
+        ]
+      },
+      "depends": [
+        "#identity"
+      ],
+      "scope": "the published release v0.1.0 of pubsec",
+      "sources": [
+        {
+          "ref": "pubsec",
+          "revision": "a8b9f926514aace8a6f51e8acc2ecc1b2ab05cba"
+        }
+      ]
+    }
+  },
+  "created": "2026-11-08T00:00:00Z",
+  "sections": [
+    {
+      "heading": "Identity",
+      "items": [
+        {
+          "ref": "#identity"
+        }
+      ]
+    },
+    {
+      "heading": "Release",
+      "items": [
+        {
+          "ref": "#release"
+        }
+      ]
+    }
+  ],
+  "slug": "pkg.pubsec",
+  "tag": "PKG-PUBSEC-11-2026",
+  "title": "pubsec"
+}
