@@ -1,0 +1,128 @@
+Feature: pubsec signing-key backup copies the signing keys repositories declare to Bitwarden
+  A repository names each signing key it uses, and the Bitwarden project and
+  secret it is backed up to, in pubkit.json's signing_keys. `pubsec
+  signing-key backup` writes each declared key that is on this machine and not
+  yet in its project, from memory, with the token typed at a hidden prompt. It
+  never overwrites a secret, and never prints a key.
+
+  Scenario: A dry run says what it would back up, and asks for nothing
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "the-project"
+    When I run pubsec "signing-key" "backup" "--dry-run"
+    Then it succeeds
+    And it prints "Keys that would be backed up to the-project, unless already there:"
+    And it prints "  pub-signing-key-demo  "
+    And nothing was asked of Bitwarden
+
+  Scenario: A declared key Bitwarden lacks is written, and never printed
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "the-project"
+    When I back the keys up, giving the token "tok"
+    Then it succeeds
+    And the SDK created "pub-signing-key-demo" holding the corpus key
+    And it prints "Keys being backed up to the-project:"
+    And it prints "  pub-signing-key-demo: backed up from"
+    And neither the key nor the token is in what it printed
+
+  Scenario: A key already backed up with the same value is left alone
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "the-project"
+    And the project already holds the corpus key as "pub-signing-key-demo"
+    When I back the keys up, giving the token "tok"
+    Then it succeeds
+    And it prints "  pub-signing-key-demo: already backed up"
+    And Bitwarden gave pubsec the value of "s1" alone
+    And the SDK wrote nothing
+
+  Scenario: Another value under the same name is never overwritten
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "the-project"
+    And the project already holds "another key" as "pub-signing-key-demo"
+    When I back the keys up, giving the token "tok"
+    Then it fails
+    And it prints "another value is stored under this name; not overwritten"
+    And the SDK wrote nothing
+
+  Scenario: A corpus key pubkit.json does not declare is pointed out
+    Given a repository with a corpus key it does not declare
+    When I run pubsec "signing-key" "backup" "--dry-run"
+    Then it succeeds
+    And it prints "a signing key pubkit.json does not declare"
+
+  Scenario: A key outside the repository is declared with a path from home
+    Given a repository that declares "~/.config/demo/facts.key" as "pub-signing-key-facts" in the project "the-project"
+    When I back the keys up, giving the token "tok"
+    Then it succeeds
+    And the SDK created "pub-signing-key-facts" holding the home key
+
+  Scenario: Two checkouts with the same key back it up once, and with different keys not at all
+    Given two checkouts under one directory that declare their corpus keys as "pub-signing-key-demo"
+    When I back up every repository under that directory, giving the token "tok"
+    Then it succeeds
+    And the SDK created "pub-signing-key-demo" once
+    Given the second checkout's corpus key differs
+    When I back up every repository under that directory, giving the token "tok"
+    Then it fails
+    And it prints "pub-signing-key-demo: different keys at"
+
+  Scenario: With no token typed, nothing is written
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "the-project"
+    When I back the keys up, giving the token ""
+    Then it fails
+    And it prints "no token given; nothing written"
+    And the SDK wrote nothing
+
+  Scenario: A declared key that is not on this machine is reported, not failed
+    Given a repository that declares a key at "~/.config/demo/missing.key" as "pub-signing-key-gone"
+    When I run pubsec "signing-key" "backup" "--dry-run"
+    Then it succeeds
+    And it prints "pub-signing-key-gone: not on this machine"
+
+  Scenario: A project the token can't see backs up nothing
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "elsewhere"
+    When I back the keys up, giving the token "tok"
+    Then it fails
+    And it prints "this token sees 0 projects that are elsewhere"
+    And the SDK wrote nothing
+
+  Scenario: A project named in another case is found, when only one matches
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "pub"
+    And Bitwarden's projects are named "Pub"
+    When I back the keys up, giving the token "tok"
+    Then it succeeds
+    And the SDK created "pub-signing-key-demo" holding the corpus key
+
+  Scenario: Two projects that differ only in case are not guessed between
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "PUB"
+    And Bitwarden's projects are named "Pub,pub"
+    When I back the keys up, giving the token "tok"
+    Then it fails
+    And it prints "this token sees 2 projects that are PUB, not one (it sees: Pub, pub)"
+    And the SDK wrote nothing
+
+  Scenario: A project declared by id, with its name as a label, is found by the id
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project with id "11111111-2222-3333-4444-555555555555" named "the-project"
+    When I back the keys up, giving the token "tok"
+    Then it succeeds
+    And it does not print "warning"
+    And the SDK created "pub-signing-key-demo" holding the corpus key
+
+  Scenario: A label Bitwarden no longer uses is warned about, and the key still backed up
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project with id "11111111-2222-3333-4444-555555555555" named "Old name"
+    When I back the keys up, giving the token "tok"
+    Then it succeeds
+    And it prints "is named the-project in Bitwarden, not Old name as declared"
+    And the SDK created "pub-signing-key-demo" holding the corpus key
+
+  Scenario: A plain string that is a UUID is the project's id
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "11111111-2222-3333-4444-555555555555"
+    And Bitwarden's projects are named "the-project,11111111-2222-3333-4444-555555555555"
+    When I back the keys up, giving the token "tok"
+    Then it succeeds
+    And the SDK created "pub-signing-key-demo" holding the corpus key
+
+  Scenario: The output names each project with its id, then lists its keys beneath it
+    Given a repository that declares its corpus key as "pub-signing-key-demo" in the project with id "11111111-2222-3333-4444-555555555555" named "the-project"
+    When I run pubsec "signing-key" "backup" "--dry-run"
+    Then it succeeds
+    And it prints "Projects: the-project (11111111-2222-3333-4444-555555555555)"
+    And it prints "Keys that would be backed up to the-project (11111111-2222-3333-4444-555555555555), unless already there:"
+    When I back the keys up, giving the token "tok"
+    Then it prints "Keys being backed up to the-project (11111111-2222-3333-4444-555555555555):"
+    And it prints "  pub-signing-key-demo: backed up from"

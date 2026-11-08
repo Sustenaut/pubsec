@@ -1,0 +1,59 @@
+{
+  "uses": [
+    {
+      "plugin": "bitwarden.secrets",
+      "paths": [
+        "src/pubsec/bitwarden.py",
+        "src/pubsec/github_app.py",
+        "src/pubsec/run.py",
+        "src/pubsec/service_account_key.py"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "github.app-token",
+      "paths": [
+        ".github/workflows/main.yml",
+        ".github/workflows/pr.yml",
+        "src/pubsec/app_secrets.py",
+        "src/pubsec/github_app.py"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "github.repo-ops",
+      "paths": [
+        ".github/workflows/wheel.yml",
+        "src/pubsec/app_secrets.py",
+        "src/pubsec/github_app.py",
+        "src/pubsec/needs/"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "google.cloud",
+      "paths": [
+        "src/pubsec/needs/gcp.py",
+        "src/pubsec/service_account_key.py"
+      ],
+      "mode": "required"
+    },
+    {
+      "plugin": "tailscale.tailnet",
+      "paths": [
+        "src/pubsec/needs/github.py"
+      ],
+      "mode": "required"
+    }
+  ],
+  "exclude": [
+    {
+      "path": "tests/**",
+      "reason": "Fakes of these services"
+    },
+    {
+      "path": "corpus/**",
+      "reason": "Release records, not code"
+    }
+  ]
+}

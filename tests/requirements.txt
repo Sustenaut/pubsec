@@ -1,0 +1,7 @@
+# The functional suite's direct dependencies. Exact pins only; the resolved
+# set with hashes lives in requirements.lock. Regenerate it with `pubkit lock`.
+-r requirements-pubkit.txt
+# `make functional` measures the suite, the `pubsec` processes it starts included.
+coverage==7.16.2
+# The deploy scenarios' fakes read the manifests a fulfil applies.
+PyYAML==6.0.3

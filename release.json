@@ -1,0 +1,20 @@
+{
+  "name": "pubsec",
+  "package": "pkg.pubsec",
+  "tag": "PKG-PUBSEC-11-2026",
+  "corpus": "corpus",
+  "manifest": {
+    "kind": "pyproject",
+    "path": "pyproject.toml"
+  },
+  "code": [
+    "src/",
+    "pyproject.toml"
+  ],
+  "command": {
+    "name": "pubsec",
+    "check": "pubsec --version"
+  },
+  "install": "pubkit sync writes ./pubsec, which runs https://github.com/Sustenaut/pubsec/releases/download/{tag}/pubsec-{version}-py3-none-any.whl by its sha256",
+  "key": "pub:sha2-256:jp27m74c6ssdjldiyufnmgnmgfjz7ob3yomtfjvbclt764sr6lsa"
+}
