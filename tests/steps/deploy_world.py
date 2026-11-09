@@ -2,8 +2,7 @@
 example service of tests/fixtures/deploy-app, copied, and fakes for
 everything a check touches. The walk is pubkit's own, and the seven types
 pubsec offers reach it as they do in use, by their `sustenaut.needs` entry
-points: a pubkit that still has types of those names built in has them
-left out here, so it is pubsec's that are walked. kubectl answers from namespaces of Secrets, service accounts,
+points. kubectl answers from namespaces of Secrets, service accounts,
 Deployments and CronJobs; the GitHub API from secrets, variables and
 workflow runs; HTTP from a status per address; kustomize is the fixture's
 rendered.yaml. Nothing runs kubectl, gh, kustomize or the network.
@@ -389,7 +388,7 @@ class World:
         return [text for text in seen for value in [CANARY, *self.values, self.token] if value in text]
 
 
-# The types pubsec offers, which a pubkit before the split also had built in.
+# The types pubsec offers.
 OURS = {"bitwarden.secret", "bitwarden.generated", "gcp.service-account-key", "github.secret",
         "github.variable", "github.deploy-settings", "k8s.secret"}
 
@@ -410,8 +409,6 @@ def world(tmp_path, monkeypatch, capsys):
     w = World(root)
     monkeypatch.chdir(root)
     monkeypatch.setenv("PUBKIT_ANY_VERSION", "1")
-    from pubkit.deploy import registry  # noqa: PLC0415
-    monkeypatch.setattr(registry, "BUILTIN", tuple(t for t in registry.BUILTIN if t.type not in OURS))
 
     def context(root, config, offline, kubectl_command=None, zones_file=None, namespace=None, server=None,
                 unit=None):
@@ -419,16 +416,11 @@ def world(tmp_path, monkeypatch, capsys):
     monkeypatch.setattr("pubkit.deploy.context", context)
     monkeypatch.setattr("pubkit.deploy.ask", lambda prompt: w.outputs.append(prompt) or (w.answers.pop(0)
                                                                                          if w.answers else ""))
-    # The write token is asked for by pubsec's sustenaut.walk hook, or, in a
-    # pubkit before the split, by pubkit itself.
+    # The write token is asked for by pubsec's sustenaut.walk hook.
     import pubsec.walk  # noqa: PLC0415
     monkeypatch.setattr(pubsec.walk, "_writers", {})
     monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: w.outputs.append(prompt) or w.token)
     monkeypatch.setattr(pubsec.walk, "BitwardenWriter", lambda token, project: FakeWriter(w, token))
-    import pubkit.deploy  # noqa: PLC0415
-    if hasattr(pubkit.deploy, "BitwardenWriter"):
-        monkeypatch.setattr("pubkit.github_app.ask_hidden", lambda prompt: w.outputs.append(prompt) or w.token)
-        monkeypatch.setattr("pubkit.deploy.BitwardenWriter", lambda token, project: FakeWriter(w, token))
     monkeypatch.setattr("sys.stdin.isatty", lambda: w.terminal, raising=False)
     import pubsec.needs.bitwarden as bitwarden  # noqa: PLC0415
     made = bitwarden.generate
