@@ -10,6 +10,8 @@ own, with the fields the walk reads. Nothing here imports pubkit.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -145,6 +147,22 @@ def status_of(error: Exception) -> int | None:
     """The HTTP status of a refusal ctx.gh raised, which carries it as `status`."""
     status = getattr(error, "status", None)
     return status if isinstance(status, int) else None
+
+
+def at_once(gh: Callable[..., Any], calls: list[tuple[str, str, Any]]) -> list[Any]:
+    """GitHub calls asked together, each `gh api` its own process, and their
+    answers in order: a check that asks several one after another overruns
+    its budget at about 0.6 s a call. A refusal, an error with its HTTP
+    status, is that call's answer; any other error is raised."""
+    def one(call: tuple[str, str, Any]) -> Any:
+        try:
+            return gh(*call)
+        except Exception as e:  # noqa: BLE001 - ctx.gh's refusal: an error with its HTTP status
+            if not hasattr(e, "status"):
+                raise
+            return e
+    with ThreadPoolExecutor(max_workers=max(1, len(calls))) as pool:
+        return list(pool.map(one, calls))
 
 
 def github_refused(error: Exception, what: str) -> Result:

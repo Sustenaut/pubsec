@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from . import Base, Result, env_name, github_refused, schema, status_of
+from . import Base, Result, at_once, env_name, github_refused, schema, status_of
 
 GITHUB_NAME = {"type": "string", "pattern": r"^(?!GITHUB_)[A-Z_][A-Z0-9_]*$",
                "x-phrase": "must be upper case letters, digits and _, not starting GITHUB_"}
@@ -162,21 +162,21 @@ class DeploySettings(Base):
     schema = schema({"environment": ENVIRONMENT})
 
     def missing(self, need: Any, ctx: Any) -> tuple[list[str], Result | None]:
+        """The settings set nowhere. The four listings are asked at once, as
+        one after another overran the budget."""
         env = need.params.get("environment", SERVER_ENVIRONMENT)
         held: set[tuple[str, str]] = set()
-        for kind in ("secret", "variable"):
-            for scope in (f"repos/{ctx.slug}/actions", f"repos/{ctx.slug}/environments/{env}"):
-                listing = f"{scope}/{kind}s?per_page={100 if kind == 'secret' else 30}"
-                try:
-                    found = ctx.gh("GET", listing, None) or {}
-                except Exception as e:  # noqa: BLE001 - ctx.gh's refusal: an error with its HTTP status
-                    if not hasattr(e, "status"):
-                        raise
-                    if status_of(e) == 404 and "environments" in scope:
-                        continue
-                    return [], github_refused(e, f"the {kind}s of {ctx.slug}")
-                held |= {(kind, str(item.get("name"))) for item in found.get(f"{kind}s") or []
-                         if isinstance(item, dict)}
+        asked = [(kind, scope) for kind in ("secret", "variable")
+                 for scope in (f"repos/{ctx.slug}/actions", f"repos/{ctx.slug}/environments/{env}")]
+        answers = at_once(ctx.gh, [("GET", f"{scope}/{kind}s?per_page={100 if kind == 'secret' else 30}", None)
+                                   for kind, scope in asked])
+        for (kind, scope), found in zip(asked, answers):
+            if isinstance(found, Exception):
+                if status_of(found) == 404 and "environments" in scope:
+                    continue
+                return [], github_refused(found, f"the {kind}s of {ctx.slug}")
+            held |= {(kind, str(item.get("name"))) for item in (found or {}).get(f"{kind}s") or []
+                     if isinstance(item, dict)}
         return [name for name, kind in DEPLOY_SETTINGS.items() if (kind, name) not in held], None
 
     def action(self, need: Any, ctx: Any) -> str:

@@ -148,6 +148,10 @@ class Secret(Base):
         """The needs whose secret fills this Secret, in the plan."""
         return [n for n in ctx.needs.values() if (secret_of(n) or {}).get("name") == need.name]
 
+    def made_from(self, need: Any, ctx: Any) -> list[str]:
+        """The needs it is made from: when a fulfil changes one's value, the walk makes it again."""
+        return [n.id for n in self.fillers(need, ctx)]
+
     def action(self, need: Any, ctx: Any) -> str:
         sources = ", ".join(n.id for n in self.fillers(need, ctx))
         return f"apply Secret {need.name} in {ctx.namespace} from {sources}, and restart what reads it"
