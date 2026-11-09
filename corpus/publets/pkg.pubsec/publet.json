@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubsec 0.1.1 is released as v0.1.1 from commit e887301fbaa49e0c30a1590156e304a6c2e14ae1.",
+      "content": "pubsec 0.1.2 is released as v0.1.2 from commit 03d821edcbac5ee27769722fa66e5b4b616061fd.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubsec",
-            "0.1.1",
+            "0.1.2",
             "pubsec --version",
-            "pubsec 0.1.1",
-            "v0.1.1",
-            "e887301fbaa49e0c30a1590156e304a6c2e14ae1"
+            "pubsec 0.1.2",
+            "v0.1.2",
+            "03d821edcbac5ee27769722fa66e5b4b616061fd"
           ]
         ]
       },
-      "scope": "the published release v0.1.1 of pubsec",
+      "scope": "the published release v0.1.2 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "e887301fbaa49e0c30a1590156e304a6c2e14ae1"
+          "revision": "03d821edcbac5ee27769722fa66e5b4b616061fd"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubsec 0.1.1 was released on 2026-11-09 from commit e887301fbaa49e0c30a1590156e304a6c2e14ae1 with these changes.",
+      "content": "pubsec 0.1.2 was released on 2026-11-09 from commit 03d821edcbac5ee27769722fa66e5b4b616061fd with these changes.",
       "data": {
         "columns": [
           {
@@ -58,18 +58,18 @@
         "rows": [
           [
             "fixed",
-            "k8s.secret and github.deploy-settings catch up with pubkit 0.31.3's walk: a Secret ready by its keys is made again when the walk changes a value it is made from (made_from), and the deploy settings' four listings are asked at once, so the check fits its budget"
+            "bitwarden.generated's plan line says a misshapen secret is replaced, and why, before the typed yes, as pubkit's did from its #199"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.1.1 of pubsec",
+      "scope": "the published release v0.1.2 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "e887301fbaa49e0c30a1590156e304a6c2e14ae1"
+          "revision": "03d821edcbac5ee27769722fa66e5b4b616061fd"
         }
       ]
     }

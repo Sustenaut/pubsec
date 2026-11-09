@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pubsec"
-version = "0.1.1"
+version = "0.1.2"
 description = "The commands and deploy need types that hold a secret value, a write token or a private key, apart from pubkit."
 readme = "README.md"
 license = "Apache-2.0"
