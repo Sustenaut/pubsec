@@ -1,6 +1,6 @@
 """The `sustenaut.walk` hook: Bitwarden's write token for a walk that wants one.
 
-Before a `pubkit deploy walk --fulfil` acts, when a need it will fulfil
+Before a `pubdeploy walk --fulfil` acts, when a need it will fulfil
 requires a write token and a terminal is there, pubkit calls `prepare(ctx,
 plan, terminal)` of each package that offers the hook. This one asks for a
 Bitwarden access token with write access at a hidden prompt, once in the

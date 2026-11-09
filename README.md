@@ -223,7 +223,7 @@ is printed or put on a command line.
 ## Making what a service needs
 
 pubkit's `deploy walk` checks every need of a repository's `deploy` block, and
-with `--fulfil` makes what is missing (pubkit's README, "Declaring what a
+with `--fulfil` makes what is missing (pubdeploy's README, "Declaring what a
 service needs"). Seven of its types are pubsec's, installed under the
 entry-point group `sustenaut.needs`, so a repository's `deploy.providers` lists
 pubsec at the release pubkit pins (`pubkit sync` adds it). `./pubsec types`

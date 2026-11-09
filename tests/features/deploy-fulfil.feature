@@ -1,4 +1,4 @@
-Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the plan is confirmed
+Feature: pubdeploy walk --fulfil makes what pubsec's needs lack, once the plan is confirmed
   The walk checks every need first. With --fulfil it prints the plan, a line
   per need it will act on, and waits for a typed yes (--yes skips that); a
   write token is asked for at a hidden prompt when a need wants one. Each
@@ -14,7 +14,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
   Scenario: Without a typed yes the plan is printed and nothing is done
     Given the Secret "example-files" is not in the cluster
     And "no" is typed at the prompt
-    When I run pubkit "deploy" "walk" "--fulfil"
+    When I run pubdeploy "walk" "--fulfil"
     Then the exit code is 1
     And stderr mentions "deploy: the walk will:"
     And stderr mentions "k8s.secret:example-files: apply Secret example-files in example from bitwarden.secret:example-files-token, and restart what reads it"
@@ -25,7 +25,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
   Scenario: A typed yes makes the Secret from Bitwarden's value, on kubectl's standard input, and restarts what reads it
     Given the Secret "example-files" is not in the cluster
     And "yes" is typed at the prompt
-    When I run pubkit "deploy" "walk" "--fulfil"
+    When I run pubdeploy "walk" "--fulfil"
     Then it succeeds
     And "k8s.secret:example-files" is ready, "(fulfilled)"
     And it prints "fulfilled: made Secret example-files in example from Bitwarden example-files-token, 17 bytes"
@@ -37,7 +37,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
   Scenario: A declined plan asks for no token, and leaves each need as its check found it
     Given Bitwarden has no "example-cookie-secret"
     And "no" is typed at the prompt
-    When I run pubkit "deploy" "walk" "--fulfil"
+    When I run pubdeploy "walk" "--fulfil"
     Then the write token was never asked for
     And "bitwarden.generated:example-cookie-secret" is missing
     And it does not print "needs a Bitwarden write token"
@@ -45,7 +45,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
   Scenario: A generated secret is made, written with the token asked for once, and fills its Secret in the same walk
     Given Bitwarden has no "example-cookie-secret"
     And the Secret "example-page-secrets" is not in the cluster
-    When I run pubkit "deploy" "walk" "--fulfil" "--yes"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
     Then it succeeds
     And the write token was asked for once
     And "bitwarden.generated:example-cookie-secret" is ready, "(fulfilled)"
@@ -56,7 +56,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
 
   Scenario: A Secret ready by its keys is made again when the walk changes a value it is made from
     Given Bitwarden's "example-cookie-secret" is 20 bytes
-    When I run pubkit "deploy" "walk" "--fulfil" "--yes"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
     Then it succeeds
     And stderr mentions "bitwarden.generated:example-cookie-secret: replace example-cookie-secret (misshapen: "
     And stderr mentions "with a new oauth2-proxy-cookie, written to Bitwarden"
@@ -68,7 +68,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
     And it prints "restarted Deployment/proxy, which reads Secret example-page-secrets"
 
   Scenario: A Secret whose values the walk did not change is left alone
-    When I run pubkit "deploy" "walk" "--fulfil" "--yes"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
     Then it succeeds
     And kubectl was given nothing to write
 
@@ -76,7 +76,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
     Given Bitwarden has no "example-cookie-secret"
     And the Secret "example-page-secrets" is not in the cluster
     And <where>
-    When I run pubkit "deploy" "walk" "--fulfil" "--yes"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
     Then the exit code is 1
     And the write token was never asked for
     And "bitwarden.generated:example-cookie-secret" is unknown, "not fulfilled: needs a Bitwarden write token"
@@ -92,7 +92,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
     Given the Secret "example-files" is not in the cluster
     And kubectl may write nothing
     And GitHub holds no secret "EXAMPLE_TOKEN"
-    When I run pubkit "deploy" "walk" "--fulfil" "--yes"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
     Then the exit code is 1
     And "k8s.secret:example-files" is missing
     And it prints "fulfil failed: kubectl apply of Secret example-files in example failed"
@@ -102,7 +102,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
   Scenario: Over the read-only deploy channel every write is unknown
     Given the walk reads the cluster over the deploy channel
     And the Secret "example-files" is not in the cluster
-    When I run pubkit "deploy" "walk" "--fulfil" "--yes"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
     Then "k8s.secret:example-files" is unknown, "not fulfilled: needs the admin channel or the plane"
     And it prints "found blocked: waits for k8s.namespace:example: Secret example-files is not in example"
     And "k8s.namespace:example" is unknown, "judged over the admin channel only"
@@ -110,7 +110,7 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
 
   Scenario: A GitHub secret is set from Bitwarden through gh, the value on its standard input
     Given GitHub holds no secret "EXAMPLE_TOKEN"
-    When I run pubkit "deploy" "walk" "--fulfil" "--yes"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
     Then it succeeds
     And it prints "fulfilled: set secret EXAMPLE_TOKEN in example-org/example from Bitwarden's example-token, 17 bytes"
     And gh set "secret" "EXAMPLE_TOKEN"
@@ -118,13 +118,13 @@ Feature: pubkit deploy walk --fulfil makes what pubsec's needs lack, once the pl
   Scenario: The deploy settings are set from the secrets block's entries
     Given GitHub holds no secret "SUSTENAUT_DEPLOY_SSH_KEY"
     And Bitwarden's "example-deploy-key" is another value
-    When I run pubkit "deploy" "walk" "--fulfil" "--yes"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
     Then "github.deploy-settings:example" is ready, "(fulfilled)"
     And gh set "secret" "SUSTENAUT_DEPLOY_SSH_KEY"
 
   Scenario: A variable the state file keeps is proposed, not set
     Given GitHub holds no variable "EXAMPLE_SETTING"
-    When I run pubkit "deploy" "walk" "--fulfil" "--yes"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
     Then "github.variable:EXAMPLE_SETTING" is missing
     And it prints "then pubkit variables --apply example"
     And stderr does not mention "github.variable:EXAMPLE_SETTING"
