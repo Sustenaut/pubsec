@@ -1,4 +1,4 @@
-"""The canary: no secret value ever reaches what `pubkit deploy` prints
+"""The canary: no secret value ever reaches what `pubdeploy` prints
 when it walks pubsec's types, nor what pubsec's write-token hook says.
 
 Every fake Secret value, every fake Bitwarden value, the write token, every
@@ -18,10 +18,10 @@ import json
 import pytest
 
 from deploy_world import CANARY, run, world  # noqa: F401 - the fixture
-from pubkit.deploy import load
-from pubkit.deploy.model import Need, Result
-from pubkit.deploy.registry import types
-from pubkit.deploy.walk import walk
+from pubdeploy import load
+from pubdeploy.model import Need, Result
+from pubdeploy.registry import types
+from pubdeploy.walk import walk
 
 STATES = {
     "all well": lambda w: None,
@@ -55,9 +55,9 @@ STATES = {
 
 
 @pytest.mark.parametrize("state", sorted(STATES))
-@pytest.mark.parametrize("argv", [("deploy", "check"), ("deploy", "check", "--json"),
-                                  ("deploy", "check", "--offline", "--json"), ("deploy", "walk", "--fulfil", "--yes"),
-                                  ("deploy", "walk", "--fulfil", "--yes", "--json")])
+@pytest.mark.parametrize("argv", [("check",), ("check", "--json"),
+                                  ("check", "--offline", "--json"), ("walk", "--fulfil", "--yes"),
+                                  ("walk", "--fulfil", "--yes", "--json")])
 def test_no_value_is_printed(world, capsys, state, argv):
     STATES[state](world)
     run(world, capsys, *argv)
@@ -95,7 +95,7 @@ def test_an_exception_holding_a_value_is_not_shown(world, capsys):
 def test_a_value_in_the_rendered_manifests_is_not_shown(world, capsys):
     world.rendered += ("---\napiVersion: v1\nkind: Secret\nmetadata: {name: example-held, namespace: example}\n"
                        f"stringData: {{cookie: {CANARY}}}\n")
-    run(world, capsys, "deploy", "check", "--offline")
+    run(world, capsys, "check", "--offline")
     assert CANARY not in world.stdout + world.stderr
 
 
@@ -109,7 +109,7 @@ def test_every_result_of_the_sound_fixture_is_free_of_values(world):
 
 
 def test_a_fulfil_that_raises_holding_a_value_is_not_shown(world):
-    from pubkit.deploy.walk import fulfil  # noqa: PLC0415
+    from pubdeploy.walk import fulfil  # noqa: PLC0415
 
     class Leaky:
         type, grade, budget, offline, schema = "example.leaky", "auto", 1.0, True, {}
@@ -139,7 +139,7 @@ def test_a_fulfil_that_raises_holding_a_value_is_not_shown(world):
 def test_generated_values_stay_in_the_walk(world, capsys):
     """ctx.values holds what a fulfil made: never journaled, printed or kept."""
     world.env.pop("EXAMPLE_COOKIE_SECRET")
-    run(world, capsys, "deploy", "walk", "--fulfil", "--yes", "--json")
+    run(world, capsys, "walk", "--fulfil", "--yes", "--json")
     made = world.written["example-cookie-secret"]
     assert made in world.values
     assert made not in "".join(world.outputs) + json.dumps(world.journal)
@@ -147,7 +147,7 @@ def test_generated_values_stay_in_the_walk(world, capsys):
 
 def test_the_types_walked_are_pubsecs(world):
     """The seven reach the walk by their entry points, as installed, and are pubsec's."""
-    from pubkit.deploy.registry import load as registry  # noqa: PLC0415
+    from pubdeploy.registry import load as registry  # noqa: PLC0415
     from deploy_world import OURS  # noqa: PLC0415
     loaded = registry()
     assert {kind: loaded.origin[kind] for kind in OURS} == dict.fromkeys(OURS, "pubsec"), loaded.warnings

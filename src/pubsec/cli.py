@@ -10,7 +10,7 @@
 
 A repository runs its pinned pubsec as ./pubsec, which pubkit's `sync` writes
 beside ./pubkit, and its ./with-secrets runs `./pubsec run`. The deploy need
-types (`pubsec types`) are installed for pubkit's walk, which loads them by
+types (`pubsec types`) are installed for pubdeploy's walk, which loads them by
 their `sustenaut.needs` entry points.
 """
 
@@ -56,7 +56,7 @@ def confined(path: Path, what: str) -> Path:
 
 
 def types() -> int:
-    """The need types pubsec offers, as `pubkit deploy types` lists them."""
+    """The need types pubsec offers, as `pubdeploy types` lists them."""
     from .needs.bitwarden import bitwarden_generated, bitwarden_secret  # noqa: PLC0415
     from .needs.gcp import service_account_key  # noqa: PLC0415
     from .needs.github import deploy_settings, github_secret, github_variable  # noqa: PLC0415
@@ -72,7 +72,7 @@ def types() -> int:
     widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]) - 1)]
     for row in rows:
         print("  ".join(cell.ljust(w) for cell, w in zip(row, widths)) + "  " + row[-1])
-    print(f"{len(offered)} types, pubsec {__version__}'s, for pubkit deploy")
+    print(f"{len(offered)} types, pubsec {__version__}'s, for pubdeploy")
     return 0
 
 
@@ -120,7 +120,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--under", type=Path, metavar="DIR",
                    help="every repository directly under DIR, not this one")
     p.add_argument("--dry-run", action="store_true", help="say what would be written, and ask for nothing")
-    commands.add_parser("types", help="the deploy need types pubsec offers pubkit's walk")
+    commands.add_parser("types", help="the deploy need types pubsec offers pubdeploy's walk")
     args = parser.parse_args(given)
     root = Path.cwd()
     if args.command == "app-secrets":

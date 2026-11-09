@@ -1,4 +1,4 @@
-"""The world `pubkit deploy` scenarios run in, with pubsec's types: the
+"""The world `pubdeploy` scenarios run in, with pubsec's types: the
 example service of tests/fixtures/deploy-app, copied, and fakes for
 everything a check touches. The walk is pubkit's own, and the seven types
 pubsec offers reach it as they do in use, by their `sustenaut.needs` entry
@@ -23,8 +23,8 @@ from typing import Any
 import pytest
 import yaml
 
-from pubkit.deploy.model import Context, Ran, Stop, no_server
-from pubkit.protect import ApiError
+from pubdeploy.model import Context, Ran, Stop, no_server
+from pubdeploy.github import ApiError
 
 CANARY = "canary-7f3e"
 FIXTURE = Path(__file__).resolve().parents[1] / "fixtures" / "deploy-app"
@@ -362,7 +362,7 @@ class World:
 
     def context(self, config: dict[str, Any] | None = None, offline: bool = False,
                 namespace: str | None = None, unit: str | None = None) -> Context:
-        from pubkit.deploy.units import unit_block  # noqa: PLC0415
+        from pubdeploy.units import unit_block  # noqa: PLC0415
         config = config or self.config
         unit = unit or config["deploy"]["namespace"]
         block = unit_block(config["deploy"], unit)
@@ -413,8 +413,8 @@ def world(tmp_path, monkeypatch, capsys):
     def context(root, config, offline, kubectl_command=None, zones_file=None, namespace=None, server=None,
                 unit=None):
         return w.context(config, offline, namespace, unit)
-    monkeypatch.setattr("pubkit.deploy.context", context)
-    monkeypatch.setattr("pubkit.deploy.ask", lambda prompt: w.outputs.append(prompt) or (w.answers.pop(0)
+    monkeypatch.setattr("pubdeploy.context", context)
+    monkeypatch.setattr("pubdeploy.ask", lambda prompt: w.outputs.append(prompt) or (w.answers.pop(0)
                                                                                          if w.answers else ""))
     # The write token is asked for by pubsec's sustenaut.walk hook.
     import pubsec.walk  # noqa: PLC0415
@@ -469,9 +469,9 @@ def key_value(key_id: str) -> str:
 
 
 def run(world: World, capsys, *argv: str) -> int:
-    """`pubkit ARGV`, in-process, in the world's repository: its exit code,
+    """`pubdeploy ARGV`, in-process, in the world's repository: its exit code,
     with what it printed kept for the canary and the steps."""
-    from pubkit.cli import main  # noqa: PLC0415
+    from pubdeploy.cli import main  # noqa: PLC0415
     world.save()
     try:
         code = main(list(argv))

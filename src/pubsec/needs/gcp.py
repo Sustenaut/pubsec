@@ -105,7 +105,7 @@ class ServiceAccountKey(Base):
         held = self.value(need, ctx)
         if held is None:
             return Result("missing", f"{name} is not in the Bitwarden project {ctx.env.get(MARKER)}",
-                          fix=f"make it: ./with-secrets ./pubkit deploy walk --fulfil, or ./pubsec service-account-key "
+                          fix=f"make it: ./with-secrets ./pubdeploy walk --fulfil, or ./pubsec service-account-key "
                               f"create --account {account} --secret {name}")
         try:
             key_id = str(json.loads(base64.b64decode(held, validate=True))["private_key_id"])
@@ -120,7 +120,7 @@ class ServiceAccountKey(Base):
             return Result("unknown", f"the keys of {account} could not be listed", fix=last(listed))
         if key_id not in listed.stdout.split():
             return Result("drift", "the key in Bitwarden is not one of the account's live keys: make a new one",
-                          fix=f"./with-secrets ./pubkit deploy walk --fulfil makes one and writes it as {name}")
+                          fix=f"./with-secrets ./pubdeploy walk --fulfil makes one and writes it as {name}")
         return Result("ready", f"key {key_id[:6]} is live")
 
     def fulfil(self, need: Any, ctx: Any) -> Result:

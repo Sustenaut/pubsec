@@ -2,7 +2,7 @@
 
 Each is installed under the entry-point group `sustenaut.needs` as an
 instance, and the walk reaches it through the provider contract alone (the
-names pubkit's README lists under "Provider contract"): a check or a fulfil
+names pubdeploy's README lists under "Provider contract"): a check or a fulfil
 uses the Context it is given by attribute, and returns a Result, pubsec's
 own, with the fields the walk reads. Nothing here imports pubkit.
 """

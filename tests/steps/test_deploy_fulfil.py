@@ -1,4 +1,4 @@
-"""Steps for pubsec's types in pubkit deploy walk --fulfil, against fakes of everything it touches: the shared ones are deploy_steps.py's."""
+"""Steps for pubsec's types in pubdeploy walk --fulfil, against fakes of everything it touches: the shared ones are deploy_steps.py's."""
 
 from __future__ import annotations
 

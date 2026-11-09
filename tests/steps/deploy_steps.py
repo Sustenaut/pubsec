@@ -1,4 +1,4 @@
-"""The steps the pubkit deploy features share. pytest-bdd keeps a step in
+"""The steps the pubdeploy features share. pytest-bdd keeps a step in
 the module that defines it, so each test_deploy_*.py takes them all with
 `from deploy_steps import *`, the fixtures they are kept as included."""
 
@@ -18,9 +18,9 @@ import yaml
 from pytest_bdd import given, parsers, then, when
 
 from deploy_world import CANARY, NOW, World, key_value, run, world  # noqa: F401 - the fixture
-from pubkit.deploy import load
-from pubkit.deploy.model import Result, Stop
-from pubkit.deploy.schema import journal_schema, problems, validate
+from pubdeploy import load
+from pubdeploy.model import Result, Stop
+from pubdeploy.schema import journal_schema, problems, validate
 
 
 def value_of(text: str):
@@ -29,7 +29,7 @@ def value_of(text: str):
 
 def entry(world: World, need_id: str) -> dict:
     """The need the block lists with that id."""
-    from pubkit.deploy.registry import types  # noqa: PLC0415
+    from pubdeploy.registry import types  # noqa: PLC0415
     known = types()
     for e in world.block["needs"]:
         params = {k: v for k, v in e.items() if k not in ("type", "name", "after")}
@@ -153,7 +153,7 @@ def offered(monkeypatch):
     monkeypatch.setitem(sys.modules, "example_needs", module)
     from importlib.metadata import entry_points  # noqa: PLC0415
     installed = list(entry_points(group="sustenaut.needs"))
-    monkeypatch.setattr("pubkit.deploy.registry.entry_points", lambda group: installed + list(points))
+    monkeypatch.setattr("pubdeploy.registry.entry_points", lambda group: installed + list(points))
     return SimpleNamespace(points=points, module=module)
 
 
@@ -193,7 +193,7 @@ def offers_bad(offered, dist, part, value):
 # --- running -------------------------------------------------------------------
 
 
-@when(parsers.re(r'I run pubkit (?P<args>(?:"[^"]*" ?)+)'), target_fixture="result")
+@when(parsers.re(r'I run pubdeploy (?P<args>(?:"[^"]*" ?)+)'), target_fixture="result")
 def run_pubkit(world, capsys, args):
     argv = args.strip().strip('"').split('" "')
     code = run(world, capsys, *argv)
@@ -202,7 +202,7 @@ def run_pubkit(world, capsys, args):
 
 @when("I check the deploy block")
 def check_block(world):
-    from pubkit.deploy.registry import types  # noqa: PLC0415
+    from pubdeploy.registry import types  # noqa: PLC0415
     world.problems = problems(world.config, world.root, types())
 
 
@@ -633,7 +633,7 @@ def has_shape(world, need_id, shape):
 
 
 def builtin(kind: str):
-    from pubkit.deploy.registry import types  # noqa: PLC0415
+    from pubdeploy.registry import types  # noqa: PLC0415
     return types()[kind]
 
 
@@ -961,7 +961,7 @@ def calls_k8s_deploy(world, version, deploys, push, only):
 
 @when("I check the workflow against the units")
 def check_units(world):
-    from pubkit.deploy.units import problems as unit_problems  # noqa: PLC0415
+    from pubdeploy.units import problems as unit_problems  # noqa: PLC0415
     world.problems = unit_problems(world.root, world.block)
 
 
@@ -1005,7 +1005,7 @@ def storage(world, monkeypatch):
     world.storage = {"signed_in": [], "files": [], "heads": {}, "moves": []}
     world.env["PUBKIT_STORAGE_TOKEN"] = f"{CANARY}-storage-token"
     world.values.append(f"{CANARY}-storage-token")
-    monkeypatch.setattr("pubkit.deploy.store.Heads", lambda base, tenant, token: FakeHeads(world, base, tenant, token))
+    monkeypatch.setattr("pubdeploy.store.Heads", lambda base, tenant, token: FakeHeads(world, base, tenant, token))
 
 
 @given(parsers.parse('storage holds the head "{path}" at "{etag}"'))

@@ -1,4 +1,4 @@
-"""Steps for gcp.service-account-key in pubkit's walk, against fakes: the shared ones are deploy_steps.py's."""
+"""Steps for gcp.service-account-key in pubdeploy's walk, against fakes: the shared ones are deploy_steps.py's."""
 
 from __future__ import annotations
 

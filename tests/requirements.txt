@@ -5,3 +5,5 @@
 coverage==7.16.2
 # The deploy scenarios' fakes read the manifests a fulfil applies.
 PyYAML==6.0.3
+# pubdeploy, whose walk the deploy scenarios run pubsec's types through.
+pubdeploy @ https://github.com/Sustenaut/pubdeploy/releases/download/v0.1.0/pubdeploy-0.1.0-py3-none-any.whl

@@ -3,7 +3,7 @@ project ./with-secrets reads, by name, without calling bws: with-secrets
 exports every secret of its project into the command's environment, and
 says so with PUBKIT_SECRETS_PROJECT, so
 
-    ./with-secrets ./pubkit deploy check
+    ./with-secrets ./pubdeploy check
 
 sees them. A generated secret's value must also have its shape. A value is
 read, measured and dropped: only its length and kind are said.
@@ -94,7 +94,7 @@ class BitwardenGenerated(BitwardenSecret):
         shape = need.params["shape"]
         value = generate(shape)
         try:
-            ctx.bitwarden_writer.write(need.name, value, f"made by pubkit deploy walk, as {shape}")
+            ctx.bitwarden_writer.write(need.name, value, f"made by pubdeploy walk, as {shape}")
         except Exception as e:  # noqa: BLE001 - the writer's failure is the need's, said without a value
             return Result("missing", f"Bitwarden refused {need.name} ({type(e).__name__})",
                           fix=str(e).replace(value, "[hidden]")[:300])
