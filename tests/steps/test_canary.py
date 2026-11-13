@@ -177,6 +177,28 @@ def test_the_hook_without_a_terminal_or_a_project_asks_nothing(world, monkeypatc
     assert ctx.bitwarden_writer is None and "no Bitwarden project" in said
 
 
+def test_without_a_terminal_the_token_comes_from_the_file_alone(world, monkeypatch, tmp_path):
+    import pubsec.walk  # noqa: PLC0415
+    monkeypatch.setattr(pubsec.walk, "_writers", {})
+    monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: pytest.fail("asked for a token"))
+    token = tmp_path / "write-token"
+    token.write_text(world.token + "\n")
+    ctx = world.context()
+    ctx.env["PUBSEC_WRITE_TOKEN"] = "never-read"
+    ctx.env["PUBSEC_WRITE_TOKEN_FILE"] = str(token)
+    assert pubsec.walk.prepare(ctx, [], False) is None
+    assert ctx.bitwarden_writer is not None and world.token in (getattr(ctx.bitwarden_writer, "token", None), getattr(ctx.bitwarden_writer, "_token", None))
+
+
+def test_a_token_file_that_cannot_be_read_gives_no_writer(world, monkeypatch, tmp_path):
+    import pubsec.walk  # noqa: PLC0415
+    monkeypatch.setattr(pubsec.walk, "_writers", {})
+    ctx = world.context()
+    ctx.env["PUBSEC_WRITE_TOKEN_FILE"] = str(tmp_path / "gone")
+    said = pubsec.walk.prepare(ctx, [], False)
+    assert ctx.bitwarden_writer is None and "no Bitwarden write token" in said
+
+
 def test_the_hook_with_an_empty_token_gives_no_writer(world, monkeypatch):
     import pubsec.walk  # noqa: PLC0415
     monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: "")

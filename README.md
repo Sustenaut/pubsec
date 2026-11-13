@@ -245,9 +245,11 @@ terminal, pubkit calls it, and it asks once in the process, at a hidden prompt,
 for a Bitwarden access token with write access to the project ./with-secrets
 read (`PUBKIT_SECRETS_PROJECT`, else `with-secrets.json`'s). The writer it gives
 the walk keeps the token in the process only, finds the secret to update by name
-among the identifiers, and writes the value from memory with the SDK. A walk
-from GitHub Actions, or with `--yes` and no terminal, asks for none, and those
-needs are unknown, saying so.
+among the identifiers, and writes the value from memory with the SDK. Without a
+terminal, the token is read from the file `PUBSEC_WRITE_TOKEN_FILE` names (the
+convergence engine's Fulfil mounts one from a Secret), never from an argument or
+a plain environment variable. A walk from GitHub Actions, or with `--yes` and no
+terminal and no such file, asks for none, and those needs are unknown, saying so.
 
 A value moves only on a standard input: never in an argv, a file, a log or the
 journal. pubkit is installed wherever a deploy block is walked or checked, CI
