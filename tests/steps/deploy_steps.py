@@ -1079,3 +1079,13 @@ def job_completed(world, job, hours):
 @then(parsers.parse('it does not print "{text}"'))
 def not_printed(world, text):
     assert text not in world.stdout, world.stdout
+
+
+@given("gcloud may not make keys")
+def gcloud_denies(world):
+    world.gcloud["deny_create"] = True
+
+
+@given(parsers.parse('PUBSEC_GCP_KEYS_GRANTED_IN is "{where}"'))
+def granted_in(world, where):
+    world.env["PUBSEC_GCP_KEYS_GRANTED_IN"] = where

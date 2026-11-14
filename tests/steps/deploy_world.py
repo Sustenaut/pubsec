@@ -452,6 +452,9 @@ def fake_gcloud(w: World, args: list[str]) -> Ran:
     if args[3] == "list":
         return Ran(0, "\n".join(keys) + "\n")
     if args[3] == "create":
+        if w.gcloud.get("deny_create"):
+            return Ran(1, "", f"ERROR: (gcloud.iam.service-accounts.keys.create) PERMISSION_DENIED: Permission "
+                              f"'iam.serviceAccountKeys.create' denied on resource (or it may not exist). 403")
         key_id = f"{len(keys) + 1:x}" * 40
         keys.append(key_id[:40])
         return Ran(0, json.dumps({"type": "service_account", "private_key_id": key_id[:40],
