@@ -1,4 +1,0 @@
-{
-  "category": "changed",
-  "change": "Text names pubdeploy, which walks pubsec's types since pubkit 0.33.0: ./pubdeploy walk --fulfil in each fix, a generated secret's note says made by pubdeploy walk, and pubsec types says it is for pubdeploy; the suite walks through pubdeploy 0.1.0 and checks pubsec imports neither pubkit nor pubdeploy"
-}
