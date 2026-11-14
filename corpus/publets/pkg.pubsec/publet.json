@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubsec 0.2.0 is released as v0.2.0 from commit 59f268b49db7d4d2a508c61782a0bc66fe42ed93.",
+      "content": "pubsec 0.2.1 is released as v0.2.1 from commit 09f6e3cdd720cdc101b3c900c1b0fe16d134e7f2.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubsec",
-            "0.2.0",
+            "0.2.1",
             "pubsec --version",
-            "pubsec 0.2.0",
-            "v0.2.0",
-            "59f268b49db7d4d2a508c61782a0bc66fe42ed93"
+            "pubsec 0.2.1",
+            "v0.2.1",
+            "09f6e3cdd720cdc101b3c900c1b0fe16d134e7f2"
           ]
         ]
       },
-      "scope": "the published release v0.2.0 of pubsec",
+      "scope": "the published release v0.2.1 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "59f268b49db7d4d2a508c61782a0bc66fe42ed93"
+          "revision": "09f6e3cdd720cdc101b3c900c1b0fe16d134e7f2"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubsec 0.2.0 was released on 2026-11-14 from commit 59f268b49db7d4d2a508c61782a0bc66fe42ed93 with these changes.",
+      "content": "pubsec 0.2.1 was released on 2026-11-14 from commit 09f6e3cdd720cdc101b3c900c1b0fe16d134e7f2 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,23 +57,19 @@
         ],
         "rows": [
           [
-            "changed",
-            "Text names pubdeploy, which walks pubsec's types since pubkit 0.33.0: ./pubdeploy walk --fulfil in each fix, a generated secret's note says made by pubdeploy walk, and pubsec types says it is for pubdeploy; the suite walks through pubdeploy 0.1.0 and checks pubsec imports neither pubkit nor pubdeploy"
-          ],
-          [
-            "added",
-            "Without a terminal, the walk hook reads the Bitwarden write token from the file PUBSEC_WRITE_TOKEN_FILE names, for the convergence engine's Fulfil; never from an argument or a plain environment variable"
+            "fixed",
+            "gcp.service-account-key: a key gcloud's account may not make (403) is blocked, the fix to grant roles/iam.serviceAccountKeyAdmin on that account, naming where (PUBSEC_GCP_KEYS_GRANTED_IN) when set, not missing"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.0 of pubsec",
+      "scope": "the published release v0.2.1 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "59f268b49db7d4d2a508c61782a0bc66fe42ed93"
+          "revision": "09f6e3cdd720cdc101b3c900c1b0fe16d134e7f2"
         }
       ]
     }
