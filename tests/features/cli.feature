@@ -12,7 +12,7 @@ Feature: pubsec says which release it is, and which need types it offers
     Then it succeeds
     And it prints "bitwarden.generated      auto"
     And it prints "k8s.secret"
-    And it prints "gcp.service-account-key  auto   4 s"
+    And it prints "gcp.service-account-key  auto   10 s"
     And it prints "7 types"
 
   Scenario: Without pubkit.json app-secrets says so
