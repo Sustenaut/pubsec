@@ -7,6 +7,11 @@ Bitwarden access token with write access at a hidden prompt, once in the
 process, finds the project (PUBKIT_SECRETS_PROJECT, which ./with-secrets
 sets, else with-secrets.json's), and gives the walk a writer, which keeps
 the token in this process only: Bitwarden's SDK takes each value in memory.
+
+Without a terminal, as the convergence engine's Fulfil runs it, the token is
+read from the file PUBSEC_WRITE_TOKEN_FILE names, a mounted Secret's: never
+from an argument or a plain environment variable. Without that file, nothing
+is asked for and nothing is written to Bitwarden.
 """
 
 from __future__ import annotations
@@ -52,6 +57,14 @@ def ask_hidden(prompt: str) -> str:
         return ""
 
 
+def token_file(path: str) -> str:
+    """The write token from a mounted file; "" when it cannot be read, which writes nothing."""
+    try:
+        return Path(path).read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+
+
 def project_of(root: Path, env: Any) -> str | None:
     """The Bitwarden project the walk writes to: the one ./with-secrets read, else with-secrets.json's."""
     if env.get("PUBKIT_SECRETS_PROJECT"):
@@ -66,14 +79,18 @@ def project_of(root: Path, env: Any) -> str | None:
 def prepare(ctx: Any, plan: Any, terminal: bool) -> str | None:
     """Give the walk a writer, asking for the token at most once; a line for
     the walk to print when there is none."""
-    if ctx.bitwarden_writer is not None or not terminal:
+    if ctx.bitwarden_writer is not None:
+        return None
+    from_file = None if terminal else ctx.env.get("PUBSEC_WRITE_TOKEN_FILE")
+    if not terminal and not from_file:
         return None
     project = project_of(ctx.root, ctx.env)
     if project is None:
         return ("pubsec: no Bitwarden project to write to: run the walk through ./with-secrets, "
                 "or where with-secrets.json names one")
     if project not in _writers:
-        token = ask_hidden(f"Bitwarden access token with write access to {project} (hidden, and not kept): ")
+        token = (token_file(from_file) if from_file else
+                 ask_hidden(f"Bitwarden access token with write access to {project} (hidden, and not kept): "))
         _writers[project] = BitwardenWriter(token, project) if token else None
     ctx.bitwarden_writer = _writers[project]
     if ctx.bitwarden_writer is None:
