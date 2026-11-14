@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubsec 0.1.2 is released as v0.1.2 from commit 03d821edcbac5ee27769722fa66e5b4b616061fd.",
+      "content": "pubsec 0.2.0 is released as v0.2.0 from commit 59f268b49db7d4d2a508c61782a0bc66fe42ed93.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubsec",
-            "0.1.2",
+            "0.2.0",
             "pubsec --version",
-            "pubsec 0.1.2",
-            "v0.1.2",
-            "03d821edcbac5ee27769722fa66e5b4b616061fd"
+            "pubsec 0.2.0",
+            "v0.2.0",
+            "59f268b49db7d4d2a508c61782a0bc66fe42ed93"
           ]
         ]
       },
-      "scope": "the published release v0.1.2 of pubsec",
+      "scope": "the published release v0.2.0 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "03d821edcbac5ee27769722fa66e5b4b616061fd"
+          "revision": "59f268b49db7d4d2a508c61782a0bc66fe42ed93"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubsec 0.1.2 was released on 2026-11-09 from commit 03d821edcbac5ee27769722fa66e5b4b616061fd with these changes.",
+      "content": "pubsec 0.2.0 was released on 2026-11-14 from commit 59f268b49db7d4d2a508c61782a0bc66fe42ed93 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,24 +57,28 @@
         ],
         "rows": [
           [
-            "fixed",
-            "bitwarden.generated's plan line says a misshapen secret is replaced, and why, before the typed yes, as pubkit's did from its #199"
+            "changed",
+            "Text names pubdeploy, which walks pubsec's types since pubkit 0.33.0: ./pubdeploy walk --fulfil in each fix, a generated secret's note says made by pubdeploy walk, and pubsec types says it is for pubdeploy; the suite walks through pubdeploy 0.1.0 and checks pubsec imports neither pubkit nor pubdeploy"
+          ],
+          [
+            "added",
+            "Without a terminal, the walk hook reads the Bitwarden write token from the file PUBSEC_WRITE_TOKEN_FILE names, for the convergence engine's Fulfil; never from an argument or a plain environment variable"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.1.2 of pubsec",
+      "scope": "the published release v0.2.0 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "03d821edcbac5ee27769722fa66e5b4b616061fd"
+          "revision": "59f268b49db7d4d2a508c61782a0bc66fe42ed93"
         }
       ]
     }
   },
-  "created": "2026-11-09T00:00:00Z",
+  "created": "2026-11-14T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",

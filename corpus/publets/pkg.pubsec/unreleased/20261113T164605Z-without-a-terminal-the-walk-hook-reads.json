@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "Without a terminal, the walk hook reads the Bitwarden write token from the file PUBSEC_WRITE_TOKEN_FILE names, for the convergence engine's Fulfil; never from an argument or a plain environment variable"
-}
