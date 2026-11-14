@@ -52,4 +52,13 @@ Feature: gcp.service-account-key: a key in Bitwarden that is one of the account'
     And "example-files@example-project.iam.gserviceaccount.com" has no key
     And no output holds a value
 
+  Scenario: A key gcloud's account may not make is blocked, naming where that is granted
+    Given the deploy block also needs {"type": "gcp.service-account-key", "account": "example-files", "project": "example-project", "bitwarden": "example-files-key"}
+    And gcloud may not make keys
+    And PUBSEC_GCP_KEYS_GRANTED_IN is "the infra repository's keys.tf"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
+    Then it prints "may not make keys of example-files@example-project.iam.gserviceaccount.com"
+    And it prints "add the account to the infra repository's keys.tf"
+    And "example-files@example-project.iam.gserviceaccount.com" has no key
+
   # --- auth.sign-in-client --------------------------------------------------------

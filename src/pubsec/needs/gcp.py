@@ -131,6 +131,13 @@ class ServiceAccountKey(Base):
         made = gcloud(["iam", "service-accounts", "keys", "create", "-", f"--iam-account={account}",
                        f"--project={project}"])
         if made.returncode != 0:
+            said = f"{made.stdout}\n{made.stderr}"
+            if "PERMISSION_DENIED" in said or "does not have permission" in said or "403" in said:
+                # Not something a walk can fix: whoever grants the account's keys must.
+                where = ctx.env.get("PUBSEC_GCP_KEYS_GRANTED_IN", "")
+                return Result("blocked", f"the account gcloud runs as may not make keys of {account}",
+                              fix=(f"grant it roles/iam.serviceAccountKeyAdmin on {account}"
+                                   + (f": add the account to {where}" if where else "")))
             return Result("missing", f"gcloud did not make a key of {account}", fix=last(made))
         try:
             key_id = str(json.loads(made.stdout)["private_key_id"])
