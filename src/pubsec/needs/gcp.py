@@ -2,7 +2,8 @@
 Bitwarden, that is one of the account's live keys.
 
 The account is Terraform's; the key is not, so it is never in Terraform's
-state. The check reads the account and its keys through gcloud, and the key
+state. The check lists the account's keys through gcloud (and describes the
+account only when that fails), and the key
 through the environment ./with-secrets gives: only its private_key_id's
 first six characters are said. The fulfil is `pubsec service-account-key
 create`'s, without its prompts: gcloud writes a new key to this process's
@@ -66,7 +67,8 @@ def last(ran: Ran) -> str:
 class ServiceAccountKey(Base):
     type = "gcp.service-account-key"
     grade = "auto"
-    budget = 4.0
+    # gcloud takes about 2 s a call on a laptop, more on the plane with a federated credential.
+    budget = 10.0
     fulfil_budget = 60.0
     needs_of_context = ("write-token",)
     schema = schema(with_secret({"account": ACCOUNT, "project": PROJECT, "bitwarden": FROM}), ("account", "bitwarden"))
@@ -92,13 +94,20 @@ class ServiceAccountKey(Base):
             return Result("unknown", "no project names the account's", fixable=False,
                           fix="give the need's project, or one google-cloud provider in the hosting block")
         account, name = email(need, project), need.params["bitwarden"]
-        ran = gcloud(["iam", "service-accounts", "describe", account, f"--project={project}", "--format=value(email)"])
-        if ran.returncode == 127:
+        # One gcloud call when the account is there (each is seconds: its start, and on the plane
+        # its credential's exchange); the account is described only when its keys cannot be listed.
+        listed = gcloud(["iam", "service-accounts", "keys", "list", f"--iam-account={account}",
+                         f"--project={project}", "--managed-by=user", "--format=value(name.basename())"])
+        if listed.returncode == 127:
             return Result("unknown", f"gcloud did not run, to read {account}",
                           fix="install gcloud, the Google Cloud CLI")
-        if ran.returncode != 0:
-            return Result("missing", f"service account {account} is not there", fixable=False,
-                          fix="the account is Terraform's: add it in the stack and apply", details=[last(ran)])
+        if listed.returncode != 0:
+            ran = gcloud(["iam", "service-accounts", "describe", account, f"--project={project}",
+                          "--format=value(email)"])
+            if ran.returncode not in (0, 127):
+                return Result("missing", f"service account {account} is not there", fixable=False,
+                              fix="the account is Terraform's: add it in the stack and apply", details=[last(ran)])
+            return Result("unknown", f"the keys of {account} could not be listed", fix=last(listed))
         if name not in ctx.values and not ctx.env.get(MARKER):
             return Result("unknown", f"{name} is not looked for outside ./with-secrets",
                           fix="run this through ./with-secrets, which reads the Bitwarden project")
@@ -114,10 +123,6 @@ class ServiceAccountKey(Base):
                           fix="make a new one")
         finally:
             del held
-        listed = gcloud(["iam", "service-accounts", "keys", "list", f"--iam-account={account}",
-                         f"--project={project}", "--managed-by=user", "--format=value(name.basename())"])
-        if listed.returncode != 0:
-            return Result("unknown", f"the keys of {account} could not be listed", fix=last(listed))
         if key_id not in listed.stdout.split():
             return Result("drift", "the key in Bitwarden is not one of the account's live keys: make a new one",
                           fix=f"./with-secrets ./pubdeploy walk --fulfil makes one and writes it as {name}")

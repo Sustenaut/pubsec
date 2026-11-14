@@ -450,6 +450,8 @@ def fake_gcloud(w: World, args: list[str]) -> Ran:
     account = flags.get("iam-account", "")
     keys = w.gcloud["keys"].setdefault(account, [])
     if args[3] == "list":
+        if account not in w.gcloud["accounts"]:
+            return Ran(1, "", f"NOT_FOUND: Unknown service account {account}")
         return Ran(0, "\n".join(keys) + "\n")
     if args[3] == "create":
         if w.gcloud.get("deny_create"):
