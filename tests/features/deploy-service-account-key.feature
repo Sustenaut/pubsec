@@ -1,5 +1,6 @@
 Feature: gcp.service-account-key: a key in Bitwarden that is one of the account's live keys
-  The check reads the account and its keys through gcloud, and the key
+  The check lists the account's keys through gcloud, in one call when the
+  account is there (each call takes seconds), and reads the key
   through the environment ./with-secrets gives. Its fulfil makes a key,
   writes it to Bitwarden with the walk's writer, and deletes it from Google
   when that fails. No value is shown: a key is named by six characters of
@@ -14,6 +15,7 @@ Feature: gcp.service-account-key: a key in Bitwarden that is one of the account'
     And Bitwarden holds "example-files-key" as the live key "0123456789abcdef0123456789abcdef01234567" of "example-files@example-project.iam.gserviceaccount.com"
     When I run pubdeploy "walk"
     Then "gcp.service-account-key:example-files-key" is ready, "key 012345 is live"
+    And gcloud was called once
     And no output holds a value
 
   Scenario: A key that is not one of the account's live keys is drift
