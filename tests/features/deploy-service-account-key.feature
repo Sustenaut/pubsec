@@ -63,4 +63,12 @@ Feature: gcp.service-account-key: a key in Bitwarden that is one of the account'
     And it prints "add the account to the infra repository's keys.tf"
     And "example-files@example-project.iam.gserviceaccount.com" has no key
 
+  Scenario: A key an organization policy forbids is blocked, naming the policy
+    Given the deploy block also needs {"type": "gcp.service-account-key", "account": "example-files", "project": "example-project", "bitwarden": "example-files-key"}
+    And an organization policy forbids service account keys
+    When I run pubdeploy "walk" "--fulfil" "--yes"
+    Then it prints "an organization policy forbids keys of example-files@example-project.iam.gserviceaccount.com"
+    And it prints "constraints/iam.disableServiceAccountKeyCreation is enforced on example-project"
+    And "example-files@example-project.iam.gserviceaccount.com" has no key
+
   # --- auth.sign-in-client --------------------------------------------------------
