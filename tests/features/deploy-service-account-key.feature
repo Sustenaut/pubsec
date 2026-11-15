@@ -71,4 +71,32 @@ Feature: gcp.service-account-key: a key in Bitwarden that is one of the account'
     And it prints "constraints/iam.disableServiceAccountKeyCreation is enforced on example-project"
     And "example-files@example-project.iam.gserviceaccount.com" has no key
 
+  # --- gcp.workload-identity -------------------------------------------------------
+
+  Scenario: A workload that may act as the account is ready, and needs no key
+    Given the deploy block also needs {"type": "gcp.workload-identity", "account": "example-files", "project": "example-project", "serviceaccount": "app", "pool": "projects/123456/locations/global/workloadIdentityPools/services", "granted_in": "the infra repository's identity.tf"}
+    And "example/app" may act as "example-files@example-project.iam.gserviceaccount.com" through the pool "projects/123456/locations/global/workloadIdentityPools/services"
+    When I run pubdeploy "walk"
+    Then "gcp.workload-identity:app" is ready, "example/app may act as example-files@example-project.iam.gserviceaccount.com"
+    And gcloud was called once
+
+  Scenario: A workload that may not is missing, and the walk proposes the grant without acting
+    Given the deploy block also needs {"type": "gcp.workload-identity", "account": "example-files", "project": "example-project", "serviceaccount": "app", "pool": "projects/123456/locations/global/workloadIdentityPools/services", "granted_in": "the infra repository's identity.tf"}
+    And "example/other" may act as "example-files@example-project.iam.gserviceaccount.com" through the pool "projects/123456/locations/global/workloadIdentityPools/services"
+    When I run pubdeploy "walk" "--fulfil" "--yes"
+    Then "gcp.workload-identity:app" is missing, "example/app may not act as"
+    And it prints "grant roles/iam.workloadIdentityUser on example-files@example-project.iam.gserviceaccount.com to principal://iam.googleapis.com/projects/123456/locations/global/workloadIdentityPools/services/subject/system:serviceaccount:example:app"
+    And it prints "to example-files's row in the infra repository's identity.tf"
+
+  Scenario: An account that is not there is Terraform's
+    Given the deploy block also needs {"type": "gcp.workload-identity", "account": "example-gone", "project": "example-project", "serviceaccount": "app", "pool": "projects/123456/locations/global/workloadIdentityPools/services"}
+    When I run pubdeploy "walk"
+    Then "gcp.workload-identity:app" is missing, "service account example-gone@example-project.iam.gserviceaccount.com is not there"
+
+  Scenario: Without gcloud the grant is unknown
+    Given the deploy block also needs {"type": "gcp.workload-identity", "account": "example-files", "project": "example-project", "serviceaccount": "app", "pool": "projects/123456/locations/global/workloadIdentityPools/services", "granted_in": "the infra repository's identity.tf"}
+    And gcloud is not installed
+    When I run pubdeploy "walk"
+    Then "gcp.workload-identity:app" is unknown, "gcloud did not run"
+
   # --- auth.sign-in-client --------------------------------------------------------

@@ -444,6 +444,12 @@ def fake_gcloud(w: World, args: list[str]) -> Ran:
     if w.gcloud["missing"]:
         return Ran(127, "", "gcloud is not installed")
     flags = dict(a.removeprefix("--").split("=", 1) for a in args if a.startswith("--") and "=" in a)
+    if args[:3] == ["iam", "service-accounts", "get-iam-policy"]:
+        if args[3] not in w.gcloud["accounts"]:
+            return Ran(1, "", f"ERROR: NOT_FOUND: Unknown service account {args[3]}")
+        members = sorted(w.gcloud.setdefault("acting", {}).get(args[3], []))
+        return Ran(0, json.dumps({"bindings": [{"role": "roles/iam.workloadIdentityUser", "members": members}]}
+                                 if members else {}))
     if args[:3] == ["iam", "service-accounts", "describe"]:
         there = args[3] in w.gcloud["accounts"]
         return Ran(0, args[3]) if there else Ran(1, "", f"NOT_FOUND: Unknown service account {args[3]}")
