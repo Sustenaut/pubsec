@@ -137,6 +137,12 @@ class ServiceAccountKey(Base):
                        f"--project={project}"])
         if made.returncode != 0:
             said = f"{made.stdout}\n{made.stderr}"
+            if "Key creation is not allowed" in said or "disableServiceAccountKeyCreation" in said:
+                # An organization policy: no grant helps, only an exception to it.
+                return Result("blocked", f"an organization policy forbids keys of {account}",
+                              fix=(f"constraints/iam.disableServiceAccountKeyCreation is enforced on {project}: "
+                                   "make an exception for the project, or let the service reach Google "
+                                   "without a key (Workload Identity)"))
             if "PERMISSION_DENIED" in said or "does not have permission" in said or "403" in said:
                 # Not something a walk can fix: whoever grants the account's keys must.
                 where = ctx.env.get("PUBSEC_GCP_KEYS_GRANTED_IN", "")

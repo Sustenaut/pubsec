@@ -1091,6 +1091,11 @@ def gcloud_denies(world):
     world.gcloud["deny_create"] = True
 
 
+@given("an organization policy forbids service account keys")
+def policy_forbids(world):
+    world.gcloud["policy_forbids"] = True
+
+
 @given(parsers.parse('PUBSEC_GCP_KEYS_GRANTED_IN is "{where}"'))
 def granted_in(world, where):
     world.env["PUBSEC_GCP_KEYS_GRANTED_IN"] = where

@@ -454,6 +454,9 @@ def fake_gcloud(w: World, args: list[str]) -> Ran:
             return Ran(1, "", f"NOT_FOUND: Unknown service account {account}")
         return Ran(0, "\n".join(keys) + "\n")
     if args[3] == "create":
+        if w.gcloud.get("policy_forbids"):
+            return Ran(1, "", "ERROR: (gcloud.iam.service-accounts.keys.create) FAILED_PRECONDITION: Key creation "
+                              "is not allowed on this service account.")
         if w.gcloud.get("deny_create"):
             return Ran(1, "", f"ERROR: (gcloud.iam.service-accounts.keys.create) PERMISSION_DENIED: Permission "
                               f"'iam.serviceAccountKeys.create' denied on resource (or it may not exist). 403")
