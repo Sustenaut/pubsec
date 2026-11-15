@@ -790,6 +790,11 @@ def dead_key(world, name, key_id):
     world.values.append(world.env[env_name(name)])
 
 
+@then("gcloud was called once")
+def gcloud_called_once(world):
+    assert len(world.calls.get("gcloud", [])) == 1, world.calls.get("gcloud")
+
+
 @given("gcloud is not installed")
 def no_gcloud(world):
     world.gcloud["missing"] = True
