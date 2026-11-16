@@ -1091,6 +1091,13 @@ def gcloud_denies(world):
     world.gcloud["deny_create"] = True
 
 
+@given(parsers.parse('"{workload}" may act as "{account}" through the pool "{pool}"'))
+def may_act(world, workload, account, pool):
+    namespace, name = workload.split("/")
+    world.gcloud.setdefault("acting", {}).setdefault(account, []).append(
+        f"principal://iam.googleapis.com/{pool}/subject/system:serviceaccount:{namespace}:{name}")
+
+
 @given("an organization policy forbids service account keys")
 def policy_forbids(world):
     world.gcloud["policy_forbids"] = True

@@ -10,6 +10,11 @@ create`'s, without its prompts: gcloud writes a new key to this process's
 pipe, the walk's Bitwarden writer keeps it, base64-encoded, and when that
 write fails the key is deleted from Google, as nothing holds it.
 
+gcp.workload-identity: a workload's Kubernetes ServiceAccount may act as a Google
+service account through a Workload Identity pool, so no key is needed at all (the
+organization may forbid keys). Its check reads the account's IAM policy; the grant
+is Terraform's, so it proposes.
+
 gcloud runs through `gcloud` below, which a test replaces: no context field.
 """
 
@@ -171,3 +176,71 @@ class ServiceAccountKey(Base):
 
 
 service_account_key = ServiceAccountKey()
+
+
+POOL = {"type": "string", "pattern": r"^projects/[0-9]+/locations/global/workloadIdentityPools/[a-z0-9-]{4,32}$",
+        "x-phrase": "must be a Workload Identity pool: projects/NUMBER/locations/global/workloadIdentityPools/ID"}
+K8S_NAME = {"type": "string", "pattern": r"^[a-z0-9]([-a-z0-9]{0,61}[a-z0-9])?$",
+            "x-phrase": "must be a Kubernetes ServiceAccount's name"}
+USER = "roles/iam.workloadIdentityUser"
+
+
+class WorkloadIdentity(Base):
+    """gcp.workload-identity: a workload's Kubernetes ServiceAccount may act as a
+    Google service account, through a Workload Identity pool, so the workload
+    reaches Google with its pod's projected token and no key. The check reads the
+    account's IAM policy through gcloud; the grant is Terraform's, so the fulfil
+    proposes the row that makes it."""
+    type = "gcp.workload-identity"
+    grade = "propose"
+    # One gcloud call: about 2 s, more on the plane.
+    budget = 10.0
+    schema = schema({"account": ACCOUNT, "project": PROJECT, "serviceaccount": K8S_NAME, "pool": POOL,
+                     "granted_in": {"type": "string", "minLength": 1,
+                                    "x-phrase": "must say where the grant is made, such as a repository's file"}},
+                    ("account", "serviceaccount", "pool"))
+
+    def default_name(self, params: dict[str, Any]) -> str | None:
+        return params.get("serviceaccount")
+
+    def member(self, need: Any, ctx: Any) -> str:
+        return (f"principal://iam.googleapis.com/{need.params['pool']}/subject/"
+                f"system:serviceaccount:{ctx.namespace}:{need.params['serviceaccount']}")
+
+    def proposal(self, need: Any, ctx: Any, account: str) -> str:
+        where = need.params.get("granted_in")
+        workload = f"{ctx.namespace}/{need.params['serviceaccount']}"
+        return (f"grant {USER} on {account} to {self.member(need, ctx)}"
+                + (f": add \"{workload}\" to {account.split('@')[0]}'s row in {where}" if where else ""))
+
+    def check(self, need: Any, ctx: Any) -> Result:
+        project = project_of(need, ctx)
+        if project is None:
+            return Result("unknown", "no project names the account's", fixable=False,
+                          fix="give the need's project, or one google-cloud provider in the hosting block")
+        account = email(need, project)
+        ran = gcloud(["iam", "service-accounts", "get-iam-policy", account, f"--project={project}", "--format=json"])
+        if ran.returncode == 127:
+            return Result("unknown", f"gcloud did not run, to read {account}", fix="install gcloud, the Google Cloud CLI")
+        if ran.returncode != 0:
+            said = f"{ran.stdout}\n{ran.stderr}"
+            if "NOT_FOUND" in said or "does not exist" in said:
+                return Result("missing", f"service account {account} is not there", fixable=False,
+                              fix="the account is Terraform's: add it in the stack and apply", details=[last(ran)])
+            return Result("unknown", f"the IAM policy of {account} could not be read", fix=last(ran))
+        try:
+            bindings = json.loads(ran.stdout or "{}").get("bindings") or []
+        except (ValueError, AttributeError):
+            return Result("unknown", f"gcloud's IAM policy of {account} is not JSON", fix="run it again")
+        member = self.member(need, ctx)
+        if any(b.get("role") == USER and member in (b.get("members") or []) for b in bindings if isinstance(b, dict)):
+            return Result("ready", f"{ctx.namespace}/{need.params['serviceaccount']} may act as {account}")
+        return Result("missing", f"{ctx.namespace}/{need.params['serviceaccount']} may not act as {account}",
+                      fix=self.proposal(need, ctx, account))
+
+    def fulfil(self, need: Any, ctx: Any) -> Result:
+        project = project_of(need, ctx) or "?"
+        return Result("missing", "the grant is Terraform's", fix=self.proposal(need, ctx, email(need, project)))
+
+
+workload_identity = WorkloadIdentity()
