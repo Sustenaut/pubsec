@@ -152,10 +152,19 @@ It goes in this order, so that a refusal comes before there is an app to clean u
 
 The key is never printed or written to disk: it stays in memory, so if the run
 ends before it is written, it is gone, and pubsec gives the app's settings page,
-where you make a new one or delete the app. The same goes for a client secret and
-webhook secret, which GitHub also returns and pubsec does not keep. The values are
+where you make a new one or delete the app. The same goes for the webhook secret,
+which GitHub also returns and pubsec does not keep, and for the client secret,
+unless the manifest asks for it (below). The values are
 written with Bitwarden's SDK, which takes them in memory, so the key is on no command
 line (see "Making a service account key" for how it is installed).
+
+An app that signs people in (it has `callback_urls`, and its server swaps an OAuth
+code for a user's token) needs its client id and that client secret. Add
+`"keep_oauth_client": true` to the `pubkit` section, and step 1 lists two more
+names, `some-app-client-id` and `some-app-client-secret`. Step 6 writes them with
+the other three, from GitHub's own answer, so there is nothing to copy from the
+app's settings page. If GitHub's answer has none, pubsec says so and writes the
+other three.
 
 A pull token for `ghcr.io` is no app's to give, so it stays a manual step.
 

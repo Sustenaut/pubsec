@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "github-app create keeps the OAuth client id and secret GitHub returns, as <prefix>-client-id and <prefix>-client-secret, when the manifest says \"keep_oauth_client\": true"
+}

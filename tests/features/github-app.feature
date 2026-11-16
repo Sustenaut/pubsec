@@ -225,3 +225,44 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     Then the exit code is 1
     And GitHub was given no code
     And it prints "could not be installed"
+
+  Scenario: An app that signs people in keeps its OAuth client in the same write
+    Given a manifest for the org "example-org" that keeps its OAuth client
+    When I create the app, giving the token "write-token" and answering "yes"
+    Then it succeeds
+    And it prints "the-app-client-secret"
+    And it does not print "Not kept: client_secret"
+    And the SDK created "the-app-client-id" as "Iv1.x"
+    And the SDK created "the-app-client-secret" as "the-client-secret"
+    And the SDK wrote 5 secrets with the token "write-token"
+    And neither the key nor the token is printed
+
+  Scenario: Without the setting, the client secret is still not kept
+    Given a manifest for the org "example-org"
+    When I create the app, giving the token "write-token" and answering "yes"
+    Then it succeeds
+    And it prints "Not kept: client_secret and webhook_secret"
+    And the SDK wrote 3 secrets with the token "write-token"
+
+  Scenario: A client name already in the project is refused before there is an app
+    Given a manifest for the org "example-org" that keeps its OAuth client
+    And Bitwarden already has "the-app-client-secret"
+    When I create the app, giving the token "write-token" and answering "yes"
+    Then the exit code is 1
+    And it prints "already in project the-project: the-app-client-secret"
+    And no browser opened
+
+  Scenario: GitHub giving no client secret writes the other three and says so
+    Given a manifest for the org "example-org" that keeps its OAuth client
+    And GitHub's answer has no client secret
+    When I create the app, giving the token "write-token" and answering "yes"
+    Then it succeeds
+    And it prints "no OAuth client id and secret"
+    And the SDK wrote 3 secrets with the token "write-token"
+
+  Scenario: keep_oauth_client must be true or false
+    Given the manifest reads {"name": "a", "url": "b", "pubkit": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s", "keep_oauth_client": "yes"}}
+    When I create the app, giving the token "write-token" and answering "yes"
+    Then the exit code is 1
+    And it prints "must be true or false"
+    And no browser opened

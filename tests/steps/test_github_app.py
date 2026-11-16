@@ -148,7 +148,8 @@ def verified(jwt: str, public, tmp_path) -> bool:
 def api(key, tmp_path, env):
     """A fake GitHub API, which records what it was asked."""
     state = {"codes": [], "jwt_ok": [], "looks": 0, "answers": [], "refuse": False,
-             "selection": "all", "repositories": [], "refuse_token": False, "listed_with": []}
+             "selection": "all", "repositories": [], "refuse_token": False, "listed_with": [],
+             "no_client_secret": False}
 
     class Handler(BaseHTTPRequestHandler):
         def log_message(self, format, *args):  # noqa: A002
@@ -174,9 +175,12 @@ def api(key, tmp_path, env):
             if state["refuse"] or self.path != "/app-manifests/the-code/conversions":
                 self.reply(404, {"message": "Not Found"})
                 return
-            self.reply(201, {"id": APP_ID, "slug": "the-app", "pem": key["pem"],
-                             "client_id": "Iv1.x", "client_secret": "the-client-secret",
-                             "webhook_secret": "the-webhook-secret"})
+            made = {"id": APP_ID, "slug": "the-app", "pem": key["pem"],
+                    "client_id": "Iv1.x", "client_secret": "the-client-secret",
+                    "webhook_secret": "the-webhook-secret"}
+            if state["no_client_secret"]:
+                del made["client_secret"]
+            self.reply(201, made)
 
         def do_GET(self):  # noqa: N802
             url = urllib.parse.urlsplit(self.path)
@@ -234,6 +238,16 @@ def _write(repo, api, section, name="the-app"):
 @given(parsers.parse('a manifest for the org "{owner}"'))
 def manifest_org(repo, api, fakes, owner):
     _write(repo, api, {"org": owner})
+
+
+@given(parsers.parse('a manifest for the org "{owner}" that keeps its OAuth client'))
+def manifest_org_oauth(repo, api, fakes, owner):
+    _write(repo, api, {"org": owner, "keep_oauth_client": True})
+
+
+@given("GitHub's answer has no client secret")
+def no_client_secret(api):
+    api["no_client_secret"] = True
 
 
 @given(parsers.parse('a manifest for the user "{owner}"'))
@@ -493,3 +507,8 @@ def no_code(api):
 @then("GitHub was given the code once")
 def code_once(api):
     assert api["codes"] == ["/app-manifests/the-code/conversions"]
+
+
+@then(parsers.parse('it does not print "{text}"'))
+def does_not_print(result, text):
+    assert text not in result.stdout + result.stderr

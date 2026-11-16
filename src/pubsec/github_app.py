@@ -1,5 +1,6 @@
 """`pubsec github-app create`: make a GitHub App from a manifest, and put its
-three values in Bitwarden, where `pubsec app-secrets` finds them.
+three values in Bitwarden, where `pubsec app-secrets` finds them (five with
+`"keep_oauth_client": true`: its OAuth client id and secret too).
 
 The manifest is the consuming repository's own, so pubsec names nothing of
 anyone's. It is what GitHub's app-manifest flow takes, plus a `pubkit` section
@@ -24,7 +25,10 @@ with write access, and look for the names in the project. Then a page on
 the code becomes the app and its key. The browser opens the app's install page,
 and the app's own key is used to watch for the installation, and to say which
 repositories it reaches. Last, typing "yes"
-writes `<prefix>-app-id`, `<prefix>-app-key` and `<prefix>-installation-id`.
+writes `<prefix>-app-id`, `<prefix>-app-key` and `<prefix>-installation-id`, and
+with `"keep_oauth_client": true` in the section, `<prefix>-client-id` and
+`<prefix>-client-secret`: the client secret GitHub makes with the app, which
+an app that signs people in needs, and which is otherwise dropped.
 
 The token is only ever asked for, never read from a file or kept. It reaches bws,
 which finds the project, in its environment, and Bitwarden's SDK, which looks the
@@ -63,7 +67,7 @@ from .bitwarden import WriteFailed, ensure, scrub, write
 from .bitwarden import names as stored_names
 
 SECTION = "pubkit"
-SETTINGS = {"org", "user", "bitwarden_project", "secret_prefix"}
+SETTINGS = {"org", "user", "bitwarden_project", "secret_prefix", "keep_oauth_client"}
 OWNER = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]*")
 # So that ./with-secrets can export each of the three: it skips a name that
 # is not a letter and then letters, digits and "_" once "-" becomes "_".
@@ -92,10 +96,14 @@ class Plan:
     org: bool
     project: str
     prefix: str
+    # Also keep the app's OAuth client (its id and the secret GitHub makes with it), for an app
+    # that signs people in: the manifest's `"keep_oauth_client": true`.
+    oauth: bool = False
 
     @property
     def names(self) -> dict[str, str]:
-        return {slot: f"{self.prefix}-{slot}" for slot in ("app-id", "app-key", "installation-id")}
+        slots = ("app-id", "app-key", "installation-id") + (("client-id", "client-secret") if self.oauth else ())
+        return {slot: f"{self.prefix}-{slot}" for slot in slots}
 
     def apps_url(self) -> str:
         """Where the owner's apps are: an organization's, or the signed-in user's."""
@@ -134,6 +142,8 @@ def problems(manifest: Any) -> list[str]:
     project = section.get("bitwarden_project")
     if not (isinstance(project, str) and project.strip()):
         out.append(f'{SECTION} needs "bitwarden_project", the project\'s name or id')
+    if not isinstance(section.get("keep_oauth_client", False), bool):
+        out.append(f'{SECTION}\'s "keep_oauth_client" must be true or false')
     prefix = section.get("secret_prefix")
     if not (isinstance(prefix, str) and PREFIX.fullmatch(prefix)):
         out.append(f'{SECTION}\'s "secret_prefix" must be lower case letters, digits and -, '
@@ -153,7 +163,7 @@ def load(path: Path) -> Plan:
     section = manifest.pop(SECTION)
     org = "org" in section
     return Plan(manifest, section["org" if org else "user"], org, section["bitwarden_project"],
-                section["secret_prefix"])
+                section["secret_prefix"], section.get("keep_oauth_client", False))
 
 
 def bws(token: str, *args: str, hide: tuple[str, ...] = ()) -> str:
@@ -459,7 +469,12 @@ def create(path: Path, replace: bool, dry_run: bool) -> int:
     print(f"GitHub made the app {app['slug']}, id {app['id']}. If this run ends before its key is "
           f"written, the key is gone: make a new one, or delete the app, at {plan.settings_url(app['slug'])}",
           flush=True)
-    if unkept := [field for field in ("client_secret", "webhook_secret") if app.get(field)]:
+    oauth = plan.oauth and bool(app.get("client_id") and app.get("client_secret"))
+    if plan.oauth and not oauth:
+        print(f"GitHub's answer has no OAuth client id and secret, so they are not written: make a client "
+              f"secret at {plan.settings_url(app['slug'])}")
+    kept = ("client_secret",) if oauth else ()
+    if unkept := [field for field in ("client_secret", "webhook_secret") if app.get(field) and field not in kept]:
         print(f"Not kept: {' and '.join(unkept)}. Make new ones in the app's settings if it needs them.")
     install = await_installation(plan, app)
     report_reach(plan, app, install)
@@ -467,8 +482,12 @@ def create(path: Path, replace: bool, dry_run: bool) -> int:
     names = plan.names
     values = {names["app-id"]: str(app["id"]), names["app-key"]: app["pem"],
               names["installation-id"]: str(install["id"])}
+    if oauth:
+        values |= {names["client-id"]: str(app["client_id"]), names["client-secret"]: str(app["client_secret"])}
     print(f"To write in project {plan.project}:")
     for name, secret in ids.items():
+        if name not in values:
+            continue
         print(f"  {'replace' if secret else 'create '}  {name}")
     try:
         answer = input('Type "yes" to write them: ')
