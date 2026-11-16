@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubsec 0.2.2 is released as v0.2.2 from commit 36a458fc3b0043866e1f7d96bc4ac67a403804c4.",
+      "content": "pubsec 0.2.3 is released as v0.2.3 from commit 79dd6d93fee447aba313ddfa4cf9d02b3d316988.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubsec",
-            "0.2.2",
+            "0.2.3",
             "pubsec --version",
-            "pubsec 0.2.2",
-            "v0.2.2",
-            "36a458fc3b0043866e1f7d96bc4ac67a403804c4"
+            "pubsec 0.2.3",
+            "v0.2.3",
+            "79dd6d93fee447aba313ddfa4cf9d02b3d316988"
           ]
         ]
       },
-      "scope": "the published release v0.2.2 of pubsec",
+      "scope": "the published release v0.2.3 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "36a458fc3b0043866e1f7d96bc4ac67a403804c4"
+          "revision": "79dd6d93fee447aba313ddfa4cf9d02b3d316988"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubsec 0.2.2 was released on 2026-11-14 from commit 36a458fc3b0043866e1f7d96bc4ac67a403804c4 with these changes.",
+      "content": "pubsec 0.2.3 was released on 2026-11-16 from commit 79dd6d93fee447aba313ddfa4cf9d02b3d316988 with these changes.",
       "data": {
         "columns": [
           {
@@ -58,23 +58,27 @@
         "rows": [
           [
             "fixed",
-            "gcp.service-account-key: the check makes one gcloud call when the account is there (it describes the account only when its keys cannot be listed), and its budget is 10 s: two calls took over 4 s even on a laptop, so on the plane it was always unknown"
+            "gcp.service-account-key: a key an organization policy forbids (iam.disableServiceAccountKeyCreation) is blocked, naming the policy and the ways out, not missing with gcloud's last line"
+          ],
+          [
+            "added",
+            "gcp.workload-identity (propose): a workload's Kubernetes ServiceAccount may act as a Google service account through a Workload Identity pool, read from the account's IAM policy; missing proposes the workloadIdentityUser grant and, with granted_in, the row that makes it"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.2 of pubsec",
+      "scope": "the published release v0.2.3 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "36a458fc3b0043866e1f7d96bc4ac67a403804c4"
+          "revision": "79dd6d93fee447aba313ddfa4cf9d02b3d316988"
         }
       ]
     }
   },
-  "created": "2026-11-14T00:00:00Z",
+  "created": "2026-11-16T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",

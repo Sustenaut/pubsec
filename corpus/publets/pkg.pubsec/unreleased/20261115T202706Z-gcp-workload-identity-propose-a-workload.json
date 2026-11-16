@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "gcp.workload-identity (propose): a workload's Kubernetes ServiceAccount may act as a Google service account through a Workload Identity pool, read from the account's IAM policy; missing proposes the workloadIdentityUser grant and, with granted_in, the row that makes it"
-}
