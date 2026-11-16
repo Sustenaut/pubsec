@@ -16,12 +16,15 @@ from __future__ import annotations
 import json
 
 import pytest
+from pytest_bdd import given, parsers, scenarios, then, when
 
 from deploy_world import CANARY, run, world  # noqa: F401 - the fixture
 from pubdeploy import load
 from pubdeploy.model import Need, Result
 from pubdeploy.registry import types
 from pubdeploy.walk import walk
+
+scenarios("canary.feature")
 
 STATES = {
     "all well": lambda w: None,
@@ -54,20 +57,26 @@ STATES = {
 }
 
 
-@pytest.mark.parametrize("state", sorted(STATES))
-@pytest.mark.parametrize("argv", [("check",), ("check", "--json"),
-                                  ("check", "--offline", "--json"), ("walk", "--fulfil", "--yes"),
-                                  ("walk", "--fulfil", "--yes", "--json")])
-def test_no_value_is_printed(world, capsys, state, argv):
+@given(parsers.parse('the deploy world with {state}'))
+def in_state(world, state):
     STATES[state](world)
-    run(world, capsys, *argv)
+
+
+@when(parsers.parse('pubdeploy runs "{argv}"'))
+def runs(world, capsys, argv):
+    run(world, capsys, *argv.split())
+
+
+@then("no value is printed, passed to a program or kept in the journal")
+def no_value(world):
     assert world.code in (0, 1)
     for text in world.outputs:
         assert CANARY not in text
     assert not world.leaked(), world.leaked()[0][:500]
 
 
-def test_an_exception_holding_a_value_is_not_shown(world, capsys):
+@then("an exception holding a value is not shown")
+def an_exception_holding_a_value_is_not_shown(world, capsys):
     class Leaky:
         type, grade, budget, offline, schema = "example.leaky", "none", 1.0, True, {}
 
@@ -92,14 +101,16 @@ def test_an_exception_holding_a_value_is_not_shown(world, capsys):
     assert CANARY not in journal.json()
 
 
-def test_a_value_in_the_rendered_manifests_is_not_shown(world, capsys):
+@then("a value in the rendered manifests is not shown")
+def a_value_in_the_rendered_manifests_is_not_shown(world, capsys):
     world.rendered += ("---\napiVersion: v1\nkind: Secret\nmetadata: {name: example-held, namespace: example}\n"
                        f"stringData: {{cookie: {CANARY}}}\n")
     run(world, capsys, "check", "--offline")
     assert CANARY not in world.stdout + world.stderr
 
 
-def test_every_result_of_the_sound_fixture_is_free_of_values(world):
+@then("every result of the sound fixture is free of values")
+def every_result_of_the_sound_fixture_is_free_of_values(world):
     ctx = world.context()
     plan = load(world.root, world.config, ctx)
     journal = walk(plan.needs, types(), ctx, service={})
@@ -108,7 +119,8 @@ def test_every_result_of_the_sound_fixture_is_free_of_values(world):
     assert CANARY not in journal.json()
 
 
-def test_a_fulfil_that_raises_holding_a_value_is_not_shown(world):
+@then("a fulfil that raises holding a value is not shown")
+def a_fulfil_that_raises_holding_a_value_is_not_shown(world):
     from pubdeploy.walk import fulfil  # noqa: PLC0415
 
     class Leaky:
@@ -136,7 +148,8 @@ def test_a_fulfil_that_raises_holding_a_value_is_not_shown(world):
     assert CANARY not in journal.json()
 
 
-def test_generated_values_stay_in_the_walk(world, capsys):
+@then("generated values stay in the walk")
+def generated_values_stay_in_the_walk(world, capsys):
     """ctx.values holds what a fulfil made: never journaled, printed or kept."""
     world.env.pop("EXAMPLE_COOKIE_SECRET")
     run(world, capsys, "walk", "--fulfil", "--yes", "--json")
@@ -145,7 +158,8 @@ def test_generated_values_stay_in_the_walk(world, capsys):
     assert made not in "".join(world.outputs) + json.dumps(world.journal)
 
 
-def test_the_types_walked_are_pubsecs(world):
+@then("the types walked are pubsecs")
+def the_types_walked_are_pubsecs(world):
     """The seven reach the walk by their entry points, as installed, and are pubsec's."""
     from pubdeploy.registry import load as registry  # noqa: PLC0415
     from deploy_world import OURS  # noqa: PLC0415
@@ -154,7 +168,8 @@ def test_the_types_walked_are_pubsecs(world):
     assert all(type(loaded.types[kind]).__module__.startswith("pubsec.needs.") for kind in OURS)
 
 
-def test_the_hook_asks_once_and_says_no_token(world, monkeypatch):
+@then("the hook asks once and says no token")
+def the_hook_asks_once_and_says_no_token(world, monkeypatch):
     """prepare() asks for the token once in a process, for every unit, and keeps it out of what it says."""
     import pubsec.walk  # noqa: PLC0415
     asked: list[str] = []
@@ -167,7 +182,8 @@ def test_the_hook_asks_once_and_says_no_token(world, monkeypatch):
     assert CANARY not in "".join(asked)
 
 
-def test_the_hook_without_a_terminal_or_a_project_asks_nothing(world, monkeypatch):
+@then("the hook without a terminal or a project asks nothing")
+def the_hook_without_a_terminal_or_a_project_asks_nothing(world, monkeypatch):
     import pubsec.walk  # noqa: PLC0415
     monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: pytest.fail("asked for a token"))
     ctx = world.context()
@@ -177,7 +193,8 @@ def test_the_hook_without_a_terminal_or_a_project_asks_nothing(world, monkeypatc
     assert ctx.bitwarden_writer is None and "no Bitwarden project" in said
 
 
-def test_without_a_terminal_the_token_comes_from_the_file_alone(world, monkeypatch, tmp_path):
+@then("without a terminal the token comes from the file alone")
+def without_a_terminal_the_token_comes_from_the_file_alone(world, monkeypatch, tmp_path):
     import pubsec.walk  # noqa: PLC0415
     monkeypatch.setattr(pubsec.walk, "_writers", {})
     monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: pytest.fail("asked for a token"))
@@ -190,7 +207,8 @@ def test_without_a_terminal_the_token_comes_from_the_file_alone(world, monkeypat
     assert ctx.bitwarden_writer is not None and world.token in (getattr(ctx.bitwarden_writer, "token", None), getattr(ctx.bitwarden_writer, "_token", None))
 
 
-def test_a_token_file_that_cannot_be_read_gives_no_writer(world, monkeypatch, tmp_path):
+@then("a token file that cannot be read gives no writer")
+def a_token_file_that_cannot_be_read_gives_no_writer(world, monkeypatch, tmp_path):
     import pubsec.walk  # noqa: PLC0415
     monkeypatch.setattr(pubsec.walk, "_writers", {})
     ctx = world.context()
@@ -199,7 +217,8 @@ def test_a_token_file_that_cannot_be_read_gives_no_writer(world, monkeypatch, tm
     assert ctx.bitwarden_writer is None and "no Bitwarden write token" in said
 
 
-def test_the_hook_with_an_empty_token_gives_no_writer(world, monkeypatch):
+@then("the hook with an empty token gives no writer")
+def the_hook_with_an_empty_token_gives_no_writer(world, monkeypatch):
     import pubsec.walk  # noqa: PLC0415
     monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: "")
     ctx = world.context()
@@ -207,7 +226,8 @@ def test_the_hook_with_an_empty_token_gives_no_writer(world, monkeypatch):
     assert ctx.bitwarden_writer is None and "no Bitwarden write token" in said
 
 
-def test_the_writer_finds_the_secret_by_its_identifier_and_writes_in_memory(monkeypatch):
+@then("the writer finds the secret by its identifier and writes in memory")
+def the_writer_finds_the_secret_by_its_identifier_and_writes_in_memory(monkeypatch):
     """BitwardenWriter looks the name up among identifiers, reading no value,
     and a refusal it raises holds neither the token nor the value."""
     import pubsec.bitwarden  # noqa: PLC0415

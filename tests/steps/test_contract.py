@@ -7,6 +7,9 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
+from pytest_bdd import scenarios, then
+
+scenarios("contract.feature")
 
 SOURCE = Path(__file__).resolve().parents[2] / "src" / "pubsec"
 # The Context's names a provider may use, as pubdeploy's README lists them.
@@ -15,18 +18,21 @@ CONTRACT = {"root", "config", "block", "namespace", "unit", "channel", "kubectl"
             "values", "types", "needs", "results", "sleep", "dispatched"}
 
 
-def test_only_the_contract_is_used():
+@then("only the contract is used")
+def only_the_contract_is_used():
     used = {m for path in SOURCE.rglob("*.py") for m in re.findall(r"\bctx\.([a-z_]+)", path.read_text())}
     assert used <= CONTRACT, used - CONTRACT
 
 
-def test_nothing_of_pubkit_is_imported():
+@then("nothing of pubkit is imported")
+def nothing_of_pubkit_is_imported():
     for path in SOURCE.rglob("*.py"):
         for line in path.read_text().splitlines():
             assert not re.match(r"\s*(from|import)\s+pub(kit|deploy)\b", line), f"{path.name}: {line}"
 
 
-def test_the_contract_is_on_pubdeploys_context():
+@then("the contract is on pubdeploys context")
+def the_contract_is_on_pubdeploys_context():
     """The pubdeploy the suite runs has every name of the contract on its Context."""
     from dataclasses import fields  # noqa: PLC0415
 
