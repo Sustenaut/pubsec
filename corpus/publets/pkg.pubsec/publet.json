@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubsec 0.2.5 is released as v0.2.5 from commit 1d4b747d207e502a730eb141521809d9c6baa67f.",
+      "content": "pubsec 0.3.0 is released as v0.3.0 from commit 4fd1bdd3889ae9d29b037e75f7957d67b32db3c0.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubsec",
-            "0.2.5",
+            "0.3.0",
             "pubsec --version",
-            "pubsec 0.2.5",
-            "v0.2.5",
-            "1d4b747d207e502a730eb141521809d9c6baa67f"
+            "pubsec 0.3.0",
+            "v0.3.0",
+            "4fd1bdd3889ae9d29b037e75f7957d67b32db3c0"
           ]
         ]
       },
-      "scope": "the published release v0.2.5 of pubsec",
+      "scope": "the published release v0.3.0 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "1d4b747d207e502a730eb141521809d9c6baa67f"
+          "revision": "4fd1bdd3889ae9d29b037e75f7957d67b32db3c0"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubsec 0.2.5 was released on 2026-11-17 from commit 1d4b747d207e502a730eb141521809d9c6baa67f with these changes.",
+      "content": "pubsec 0.3.0 was released on 2026-11-17 from commit 4fd1bdd3889ae9d29b037e75f7957d67b32db3c0 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,19 +57,19 @@
         ],
         "rows": [
           [
-            "added",
-            "bitwarden.adopt: a need that keeps a value a cluster Secret already holds by copying it into Bitwarden (secret, format, shape, note); ready when Bitwarden has it, missing when the Secret holds a value to keep, blocked when it holds none; k8s.secret is not made again for it"
+            "changed",
+            "pubkit is now pubrules: pubsec reads pubrules.json, ./pubsec run sets PUBRULES_SECRETS_PROJECT (not PUBKIT_SECRETS_PROJECT), a GitHub App manifest's own section is named pubrules, and the repository itself runs on pubrules 0.43.0"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.5 of pubsec",
+      "scope": "the published release v0.3.0 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "1d4b747d207e502a730eb141521809d9c6baa67f"
+          "revision": "4fd1bdd3889ae9d29b037e75f7957d67b32db3c0"
         }
       ]
     }
