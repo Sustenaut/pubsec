@@ -440,7 +440,7 @@ def world(tmp_path, monkeypatch, capsys):
     shutil.copytree(FIXTURE, root)
     w = World(root)
     monkeypatch.chdir(root)
-    monkeypatch.setenv("PUBKIT_ANY_VERSION", "1")
+    monkeypatch.setenv("PUBRULES_ANY_VERSION", "1")
 
     def context(root, config, offline, kubectl_command=None, zones_file=None, namespace=None, server=None,
                 unit=None):

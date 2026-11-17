@@ -1,0 +1,4 @@
+{
+  "category": "internal",
+  "change": "The deploy scenarios set PUBRULES_ANY_VERSION, the name pubrules reads, in place of PUBKIT_ANY_VERSION"
+}
