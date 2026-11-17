@@ -1,4 +1,4 @@
-# Managed by pubkit 0.37.0: `pubkit sync` rewrites this file, and
+# Managed by pubkit 0.42.0: `pubkit sync` rewrites this file, and
 # `pubkit sync --check` fails when it differs. Include it from the Makefile,
 # and set the variables below there, before the include; targets of your own
 # go there too. It is the same in every Python package, so a rule set here

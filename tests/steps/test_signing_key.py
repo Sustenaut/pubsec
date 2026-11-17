@@ -19,7 +19,7 @@ from conftest import pubsec
 from fake_reads import METHODS, READS, REFUSED_LIST
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from pubkit.plugin import Completed
+from pubtest.core import Completed
 
 scenarios("signing-key.feature")
 
