@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubsec 0.2.4 is released as v0.2.4 from commit 43f83e6d2a891b44dc446246385801a41e7a93ce.",
+      "content": "pubsec 0.2.5 is released as v0.2.5 from commit 1d4b747d207e502a730eb141521809d9c6baa67f.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubsec",
-            "0.2.4",
+            "0.2.5",
             "pubsec --version",
-            "pubsec 0.2.4",
-            "v0.2.4",
-            "43f83e6d2a891b44dc446246385801a41e7a93ce"
+            "pubsec 0.2.5",
+            "v0.2.5",
+            "1d4b747d207e502a730eb141521809d9c6baa67f"
           ]
         ]
       },
-      "scope": "the published release v0.2.4 of pubsec",
+      "scope": "the published release v0.2.5 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "43f83e6d2a891b44dc446246385801a41e7a93ce"
+          "revision": "1d4b747d207e502a730eb141521809d9c6baa67f"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubsec 0.2.4 was released on 2026-11-17 from commit 43f83e6d2a891b44dc446246385801a41e7a93ce with these changes.",
+      "content": "pubsec 0.2.5 was released on 2026-11-17 from commit 1d4b747d207e502a730eb141521809d9c6baa67f with these changes.",
       "data": {
         "columns": [
           {
@@ -58,18 +58,18 @@
         "rows": [
           [
             "added",
-            "github-app create keeps the OAuth client id and secret GitHub returns, as <prefix>-client-id and <prefix>-client-secret, when the manifest says \"keep_oauth_client\": true"
+            "bitwarden.adopt: a need that keeps a value a cluster Secret already holds by copying it into Bitwarden (secret, format, shape, note); ready when Bitwarden has it, missing when the Secret holds a value to keep, blocked when it holds none; k8s.secret is not made again for it"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.4 of pubsec",
+      "scope": "the published release v0.2.5 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "43f83e6d2a891b44dc446246385801a41e7a93ce"
+          "revision": "1d4b747d207e502a730eb141521809d9c6baa67f"
         }
       ]
     }
