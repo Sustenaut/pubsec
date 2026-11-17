@@ -149,8 +149,10 @@ class Secret(Base):
         return [n for n in ctx.needs.values() if (secret_of(n) or {}).get("name") == need.name]
 
     def made_from(self, need: Any, ctx: Any) -> list[str]:
-        """The needs it is made from: when a fulfil changes one's value, the walk makes it again."""
-        return [n.id for n in self.fillers(need, ctx)]
+        """The needs it is made from: when a fulfil changes one's value, the walk makes it again.
+        A filler whose type keeps the value (bitwarden.adopt, which copies this Secret's own) is
+        not one: its fulfil changes nothing the Secret holds."""
+        return [n.id for n in self.fillers(need, ctx) if not getattr(ctx.types.get(n.type), "keeps_value", False)]
 
     def action(self, need: Any, ctx: Any) -> str:
         sources = ", ".join(n.id for n in self.fillers(need, ctx))

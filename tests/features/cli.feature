@@ -1,20 +1,21 @@
 Feature: pubsec says which release it is, and which need types it offers
   A quick check that ./pubsec runs the wheel pubkit pins: its version, and
-  the eight types pubdeploy's walk loads from it.
+  the nine types pubdeploy's walk loads from it.
 
   Scenario: --version names the release
     When I run pubsec "--version"
     Then it succeeds
     And it prints "pubsec "
 
-  Scenario: types lists the eight types, as pubdeploy types does
+  Scenario: types lists the nine types, as pubdeploy types does
     When I run pubsec "types"
     Then it succeeds
     And it prints "bitwarden.generated      auto     0.5 s"
     And it prints "k8s.secret"
     And it prints "gcp.service-account-key  auto     10 s"
     And it prints "gcp.workload-identity    propose  10 s"
-    And it prints "8 types"
+    And it prints "bitwarden.adopt          auto     4 s"
+    And it prints "9 types"
 
   Scenario: Without pubkit.json app-secrets says so
     When I run pubsec "app-secrets"

@@ -233,7 +233,7 @@ is printed or put on a command line.
 
 pubkit's `deploy walk` checks every need of a repository's `deploy` block, and
 with `--fulfil` makes what is missing (pubdeploy's README, "Declaring what a
-service needs"). Eight of its types are pubsec's, installed under the
+service needs"). Nine of its types are pubsec's, installed under the
 entry-point group `sustenaut.needs`, so a repository's `deploy.providers` lists
 pubsec at the release pubkit pins (`pubkit sync` adds it). `./pubsec types`
 lists them:
@@ -242,6 +242,7 @@ lists them:
 | --- | --- | --- | --- |
 | bitwarden.secret | the secret is in the Bitwarden project ./with-secrets read: its length | none: a person puts it there | ./with-secrets |
 | bitwarden.generated | as bitwarden.secret, and the value has its shape | a new value of its shape, written to Bitwarden, and kept for the Secret it fills | a write token |
+| bitwarden.adopt | the secret is in Bitwarden; when it is not, whether its `secret` (a Secret's key in the cluster) holds a value of its `format` (a regular expression) and `shape` to keep: missing if so, blocked if not (bitwarden.generated should make one then) | the cluster's value copied into Bitwarden, with its `note`, and kept for the Secret it came from: never printed | kubectl that reads Secrets (the admin channel or the plane), a write token |
 | gcp.service-account-key | the key in Bitwarden is one of the account's live keys | a new key, written to Bitwarden, deleted from Google if that fails | gcloud, a write token |
 | gcp.workload-identity | the workload's Kubernetes ServiceAccount may act as the Google account through the Workload Identity pool (`roles/iam.workloadIdentityUser` on the account, read from its IAM policy), so the workload needs no key | none: it proposes the grant, and with `granted_in` the row in that Terraform file | gcloud that may read the account's IAM policy |
 | github.secret | it is set, on the repository or in its environment | `gh secret set` of what the secrets and github_app blocks name, from Bitwarden, as `pubsec app-secrets` does | ./with-secrets |

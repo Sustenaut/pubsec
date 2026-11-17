@@ -25,6 +25,7 @@ pubsec = "pubsec.cli:main"
 [project.entry-points."sustenaut.needs"]
 bitwarden-secret = "pubsec.needs.bitwarden:bitwarden_secret"
 bitwarden-generated = "pubsec.needs.bitwarden:bitwarden_generated"
+bitwarden-adopt = "pubsec.needs.adopt:bitwarden_adopt"
 gcp-service-account-key = "pubsec.needs.gcp:service_account_key"
 gcp-workload-identity = "pubsec.needs.gcp:workload_identity"
 github-secret = "pubsec.needs.github:github_secret"
