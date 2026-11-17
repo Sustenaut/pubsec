@@ -1,7 +1,7 @@
 """`pubsec signing-key backup`: copy the signing keys repositories declare to Bitwarden.
 
 A repository says which signing keys it uses, and where each is backed up, in
-pubkit.json:
+pubrules.json:
 
     "signing_keys": [
       {"path": "corpus/.publet/signing.key",
@@ -37,7 +37,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 
-CONFIG = "pubkit.json"
+CONFIG = "pubrules.json"
 FIELD = "signing_keys"
 NAME = re.compile(r"[A-Za-z][A-Za-z0-9_-]*")
 UUID = re.compile(r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}", re.I)
@@ -60,7 +60,7 @@ class Declared:
 
 
 def problems(block: object) -> list[str]:
-    """What is wrong with a pubkit.json `signing_keys` block: one phrase each."""
+    """What is wrong with a pubrules.json `signing_keys` block: one phrase each."""
     if block is None:
         return []
     if not isinstance(block, list):
@@ -117,7 +117,7 @@ def declared(repo: Path, config: dict) -> list[Declared]:
 
 
 def undeclared(repo: Path, config: dict) -> list[Path]:
-    """The corpus keys here that pubkit.json does not declare."""
+    """The corpus keys here that pubrules.json does not declare."""
     named = {Path(entry.get("path", "")) for entry in config.get(FIELD) or [] if isinstance(entry, dict)}
     return [repo / place for place in KEY_PLACES if (repo / place).is_file() and Path(place) not in named]
 

@@ -1,18 +1,18 @@
 # pubsec
 
 The commands and deploy need types that hold a secret value, a write token or
-a private key in memory, kept apart from [pubkit](https://github.com/Sustenaut/pubkit),
+a private key in memory, kept apart from [pubrules](https://github.com/Sustenaut/pubrules),
 which only reads *about* secrets (their names, keys, lengths and declarations).
 The rule that draws the line: code that holds a secret, a write token or a key
-lives here; code that reads a declaration stays in pubkit.
+lives here; code that reads a declaration stays in pubrules.
 
 pubsec has no runtime dependencies. Bitwarden's SDK is installed for a run, by
 hash, by the commands that write (see "Making a service account key"), and
 `bws`, `gh` and `gcloud` are programs it runs.
 
-A repository runs its pinned pubsec as `./pubsec`, which pubkit's `sync` writes
-beside `./pubkit` wherever there is a `with-secrets.json` or a `deploy` block.
-It runs the release wheel pubkit pins, through `uvx`, checking its sha256 on
+A repository runs its pinned pubsec as `./pubsec`, which pubrules's `sync` writes
+beside `./pubrules` wherever there is a `with-secrets.json` or a `deploy` block.
+It runs the release wheel pubrules pins, through `uvx`, checking its sha256 on
 every run:
 
 ```sh
@@ -44,10 +44,10 @@ it cannot see the one configured. `with-secrets.json` is the repository's:
 | `aliases` | Optional: files (paths from the repository root), each `{"aliases": {"NAME": "secret"}}`, that also export the secret named `secret` as `NAME`, for a tool that reads a fixed name (the Tailscale Terraform provider reads `TAILSCALE_OAUTH_CLIENT_ID`). Keep each file next to the code that needs it. An alias of a secret Bitwarden does not have is reported and skipped |
 
 Every other secret goes under its name in upper case, `-` as `_`, and
-`PUBKIT_SECRETS_PROJECT` names the project they came from, so pubkit's deploy
+`PUBRULES_SECRETS_PROJECT` names the project they came from, so pubrules's deploy
 walk can tell a secret that is absent from one that was never read.
 
-`./with-secrets` is one line, which pubkit manages: it runs `./pubsec run --cwd
+`./with-secrets` is one line, which pubrules manages: it runs `./pubsec run --cwd
 "$PWD" -- COMMAND`, so the repository's pinned pubsec does the work, in the
 directory it is called from, and needs `uv` (for `./pubsec`) and `bws`.
 `pubsec run` can be called directly too:
@@ -62,7 +62,7 @@ it may not run, and 1, before anything runs, for a setting it can't use.
 
 ## Sending secrets to a repository
 
-A repository names the values it needs in its `pubkit.json`. A GitHub App has
+A repository names the values it needs in its `pubrules.json`. A GitHub App has
 three, in `github_app`, which may also be a list of apps. `secrets` lists any
 others, each with a `kind` of `secret` or `variable`:
 
@@ -94,15 +94,15 @@ It writes nothing until every one is there and looks right (digits for an app's
 ids, BEGIN and END lines for its key, and not empty for the others). It prints names and lengths, never a value,
 and each value reaches `gh` on its standard input. An app installed on several
 owners has a different installation id on each, so each repository names its own
-owner's. `pubkit sync --check` checks both blocks.
+owner's. `pubrules sync --check` checks both blocks.
 
 ## Creating a GitHub App
 
 `pubsec github-app create` makes an app with GitHub's
 [manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest)
 and puts its three values in Bitwarden, under names `pubsec app-secrets` can then
-send on. The manifest is the repository's own: GitHub's fields, and a `pubkit`
-section GitHub never sees (the name it had when this command was pubkit's),
+send on. The manifest is the repository's own: GitHub's fields, and a `pubrules`
+section GitHub never sees (the name it had when this command was pubrules's),
 naming the owner (`org` or `user`), the Bitwarden project (its name or id) and
 the prefix of the secrets' names:
 
@@ -112,7 +112,7 @@ the prefix of the secrets' names:
   "url": "https://example.org",
   "public": false,
   "default_permissions": { "contents": "read" },
-  "pubkit": {
+  "pubrules": {
     "org": "some-org",
     "bitwarden_project": "some-project",
     "secret_prefix": "some-app"
@@ -160,7 +160,7 @@ line (see "Making a service account key" for how it is installed).
 
 An app that signs people in (it has `callback_urls`, and its server swaps an OAuth
 code for a user's token) needs its client id and that client secret. Add
-`"keep_oauth_client": true` to the `pubkit` section, and step 1 lists two more
+`"keep_oauth_client": true` to the `pubrules` section, and step 1 lists two more
 names, `some-app-client-id` and `some-app-client-secret`. Step 6 writes them with
 the other three, from GitHub's own answer, so there is nothing to copy from the
 app's settings page. If GitHub's answer has none, pubsec says so and writes the
@@ -195,7 +195,7 @@ Bitwarden's own SDK licence, not pubsec's.
 ## Backing up signing keys
 
 A repository names every signing key it uses, and where it is backed up, in
-`pubkit.json`:
+`pubrules.json`:
 
 ```json
 "signing_keys": [
@@ -211,7 +211,7 @@ taken as an id when it is a UUID, else as a name, in any case.
 
 `path` is from the repository's root, or from the home directory when it
 starts with `~/`: a key kept outside any repository, such as one under
-`~/.config`, is declared by the repository whose tools use it. `pubkit sync
+`~/.config`, is declared by the repository whose tools use it. `pubrules sync
 --check` refuses a block it can't use.
 
     pubsec signing-key backup [--under DIR] [--dry-run]
@@ -224,18 +224,18 @@ prompt. A secret already there is found by name among the project's
 identifiers, and only the values of those named as the declared keys are read,
 to compare: one with the same value is left alone; another value under the
 same name is never overwritten and fails the run, as do two different keys
-declared under one name. A key pubkit.json does not declare, at
+declared under one name. A key pubrules.json does not declare, at
 `corpus/.publet/signing.key` or `.publet/signing.key`, is pointed out.
 `--dry-run` lists what it would write and asks for nothing. No key or token
 is printed or put on a command line.
 
 ## Making what a service needs
 
-pubkit's `deploy walk` checks every need of a repository's `deploy` block, and
+pubrules's `deploy walk` checks every need of a repository's `deploy` block, and
 with `--fulfil` makes what is missing (pubdeploy's README, "Declaring what a
 service needs"). Nine of its types are pubsec's, installed under the
 entry-point group `sustenaut.needs`, so a repository's `deploy.providers` lists
-pubsec at the release pubkit pins (`pubkit sync` adds it). `./pubsec types`
+pubsec at the release pubrules pins (`pubrules sync` adds it). `./pubsec types`
 lists them:
 
 | type | its check | its fulfil | it needs |
@@ -252,9 +252,9 @@ lists them:
 
 The write token is asked for by pubsec's `sustenaut.walk` hook, `bitwarden =
 "pubsec.walk:prepare"`: before a walk fulfils a need that wants one, at a
-terminal, pubkit calls it, and it asks once in the process, at a hidden prompt,
+terminal, pubrules calls it, and it asks once in the process, at a hidden prompt,
 for a Bitwarden access token with write access to the project ./with-secrets
-read (`PUBKIT_SECRETS_PROJECT`, else `with-secrets.json`'s). The writer it gives
+read (`PUBRULES_SECRETS_PROJECT`, else `with-secrets.json`'s). The writer it gives
 the walk keeps the token in the process only, finds the secret to update by name
 among the identifiers, and writes the value from memory with the SDK. Without a
 terminal, the token is read from the file `PUBSEC_WRITE_TOKEN_FILE` names (the
@@ -263,33 +263,33 @@ a plain environment variable. A walk from GitHub Actions, or with `--yes` and no
 terminal and no such file, asks for none, and those needs are unknown, saying so.
 
 A value moves only on a standard input: never in an argv, a file, a log or the
-journal. pubkit is installed wherever a deploy block is walked or checked, CI
+journal. pubrules is installed wherever a deploy block is walked or checked, CI
 included, and pubsec with it, as `sync --check` validates every need with its
 type's schema; in CI without a write token pubsec reads nothing. The trust
 boundary is the token, not the code.
 
 ### The provider contract
 
-pubsec imports nothing of pubkit at runtime. A check or a fulfil uses the
-walk's Context by these names alone, which pubkit lists in its README under
+pubsec imports nothing of pubrules at runtime. A check or a fulfil uses the
+walk's Context by these names alone, which pubrules lists in its README under
 "Provider contract" and does not change without saying so in its changelog:
 `root`, `config`, `block`, `namespace`, `unit`, `channel`, `kubectl`, `server`,
 `gh`, `send`, `bitwarden_writer`, `http_get`, `env`, `now`, `rendered`,
 `offline`, `slug`, `zones`, `resolve`, `values`, `types`, `needs`, `results`,
 `sleep` and `dispatched`. It returns its own `Result`, with `state`, `summary`,
 `fix`, `details`, `fixable` and `step`. `tests/steps/test_contract.py` fails when
-pubsec uses another name or imports pubkit.
+pubsec uses another name or imports pubrules.
 
 ## Developing
 
 ```sh
 make venv     # .venv from tests/requirements.lock, with this checkout editable
-make check    # ./pubkit sync --check, and the Gherkin suite with its coverage
+make check    # ./pubrules sync --check, and the Gherkin suite with its coverage
 ```
 
 The suite runs every command end to end against stand-ins for `bws`, `gh`,
 `gcloud`, `uv`, a browser and Bitwarden's SDK, and the seven types through
-pubkit's own walk (pubkit is a test dependency, pinned in
+pubrules's own walk (pubrules is a test dependency, pinned in
 `tests/requirements.txt`). Every fake value in the deploy scenarios holds a
 canary, and `tests/steps/test_canary.py` fails when one reaches an output, the
 journal, an exception's text or a command line.
@@ -303,7 +303,7 @@ To release, run `pubrel prepare` on an up-to-date main in a checkout holding the
 release key (`corpus/.publet`, gitignored): it sets `version` in `pyproject.toml`
 (`__version__` reads it), signs the release and opens its pull request. Merging
 that tags `vX.Y.Z` and makes the release, and `wheel.yml` then attaches
-`pubsec-X.Y.Z-py3-none-any.whl`, the wheel pubkit pins by its sha256.
+`pubsec-X.Y.Z-py3-none-any.whl`, the wheel pubrules pins by its sha256.
 
 ## Licence
 

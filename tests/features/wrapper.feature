@@ -11,7 +11,7 @@ Feature: pubsec run runs one command with the repository's secrets in its enviro
     Then it succeeds
     And the command sees "TF_VAR_hcloud_token" as "h1"
     And the command sees "RESTIC_PASSWORD" as "r1"
-    And the command sees "PUBKIT_SECRETS_PROJECT" as "infra"
+    And the command sees "PUBRULES_SECRETS_PROJECT" as "infra"
     And the command does not see "HCLOUD_TOKEN"
     And the calling shell's environment is unchanged
 

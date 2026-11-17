@@ -3,15 +3,15 @@ three values in Bitwarden, where `pubsec app-secrets` finds them (five with
 `"keep_oauth_client": true`: its OAuth client id and secret too).
 
 The manifest is the consuming repository's own, so pubsec names nothing of
-anyone's. It is what GitHub's app-manifest flow takes, plus a `pubkit` section
-that GitHub never sees (its name from when this was pubkit's):
+anyone's. It is what GitHub's app-manifest flow takes, plus a `pubrules` section
+that GitHub never sees (its name from when this was pubrules's):
 
     {
       "name": "some-app",
       "url": "https://example.org",
       "public": false,
       "default_permissions": {"contents": "read"},
-      "pubkit": {
+      "pubrules": {
         "org": "some-org",            # or "user": "someone"
         "bitwarden_project": "some-project",
         "secret_prefix": "some-app"
@@ -66,7 +66,7 @@ from .app_secrets import wrong_value
 from .bitwarden import WriteFailed, ensure, scrub, write
 from .bitwarden import names as stored_names
 
-SECTION = "pubkit"
+SECTION = "pubrules"
 SETTINGS = {"org", "user", "bitwarden_project", "secret_prefix", "keep_oauth_client"}
 OWNER = re.compile(r"[A-Za-z0-9][A-Za-z0-9-]*")
 # So that ./with-secrets can export each of the three: it skips a name that
@@ -89,7 +89,7 @@ class BwsFailed(Stop):
 
 @dataclass(frozen=True)
 class Plan:
-    """What the manifest's `pubkit` section says, and what it sends GitHub."""
+    """What the manifest's `pubrules` section says, and what it sends GitHub."""
 
     manifest: dict
     owner: str

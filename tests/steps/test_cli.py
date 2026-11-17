@@ -1,4 +1,4 @@
-"""Steps for pubsec's own command line: the shared ones are conftest's and pubkit's plugin's."""
+"""Steps for pubsec's own command line: the shared ones are conftest's and pubrules's plugin's."""
 
 from __future__ import annotations
 

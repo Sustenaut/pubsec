@@ -1,5 +1,5 @@
 Feature: pubsec says which release it is, and which need types it offers
-  A quick check that ./pubsec runs the wheel pubkit pins: its version, and
+  A quick check that ./pubsec runs the wheel pubrules pins: its version, and
   the nine types pubdeploy's walk loads from it.
 
   Scenario: --version names the release
@@ -17,7 +17,7 @@ Feature: pubsec says which release it is, and which need types it offers
     And it prints "bitwarden.adopt          auto     4 s"
     And it prints "9 types"
 
-  Scenario: Without pubkit.json app-secrets says so
+  Scenario: Without pubrules.json app-secrets says so
     When I run pubsec "app-secrets"
     Then the exit code is 1
-    And stderr mentions "no pubkit.json here"
+    And stderr mentions "no pubrules.json here"

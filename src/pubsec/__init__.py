@@ -1,5 +1,5 @@
 """pubsec: the commands and deploy need types that hold a secret value, a
-write token or a private key in memory, apart from pubkit, which only reads
+write token or a private key in memory, apart from pubrules, which only reads
 about secrets."""
 
 import re as _re

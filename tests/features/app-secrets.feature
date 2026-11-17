@@ -1,5 +1,5 @@
 Feature: pubsec app-secrets sends what this repository names to it
-  The repository's pubkit.json names them, so pubsec names nothing of anyone's.
+  The repository's pubrules.json names them, so pubsec names nothing of anyone's.
   It checks them all, and writes none unless all pass. It never prints a value,
   and never puts one on a command line.
 
@@ -104,7 +104,7 @@ Feature: pubsec app-secrets sends what this repository names to it
       | plain-user  | empty   | BAD      plain-user is empty |
 
   Scenario Outline: A wrong secrets list is refused
-    Given the file "pubkit.json" reads "{"kind": "utility", "secrets": <list>}"
+    Given the file "pubrules.json" reads "{"kind": "utility", "secrets": <list>}"
     When I run pubsec "app-secrets"
     Then the exit code is 1
     And it prints "<message>"
@@ -126,25 +126,25 @@ Feature: pubsec app-secrets sends what this repository names to it
       | [{"from": "a", "to": "A", "kind": "secret"}, {"from": "b", "to": "A", "kind": "secret"}] | two of them have the same |
 
   Scenario: An empty secrets list has nothing to send
-    Given the file "pubkit.json" reads "{"kind": "utility", "secrets": []}"
+    Given the file "pubrules.json" reads "{"kind": "utility", "secrets": []}"
     When I run pubsec "app-secrets"
     Then the exit code is 1
     And it prints "secrets list is empty"
 
   Scenario: An empty list of apps is refused
-    Given the file "pubkit.json" reads "{"kind": "utility", "github_app": []}"
+    Given the file "pubrules.json" reads "{"kind": "utility", "github_app": []}"
     When I run pubsec "app-secrets"
     Then the exit code is 1
     And it prints "it lists no apps"
 
   Scenario: A repository without the block is told so
-    Given the file "pubkit.json" reads "{"kind": "utility"}"
+    Given the file "pubrules.json" reads "{"kind": "utility"}"
     When I run pubsec "app-secrets"
     Then the exit code is 1
-    And it prints "pubkit.json has no github_app block or secrets list"
+    And it prints "pubrules.json has no github_app block or secrets list"
 
   Scenario Outline: A bad block is refused
-    Given the file "pubkit.json" reads "{"kind": "utility", "github_app": <block>}"
+    Given the file "pubrules.json" reads "{"kind": "utility", "github_app": <block>}"
     When I run pubsec "app-secrets"
     Then the exit code is 1
     And it prints "<message>"

@@ -1,10 +1,10 @@
 """The `sustenaut.walk` hook: Bitwarden's write token for a walk that wants one.
 
 Before a `pubdeploy walk --fulfil` acts, when a need it will fulfil
-requires a write token and a terminal is there, pubkit calls `prepare(ctx,
+requires a write token and a terminal is there, pubrules calls `prepare(ctx,
 plan, terminal)` of each package that offers the hook. This one asks for a
 Bitwarden access token with write access at a hidden prompt, once in the
-process, finds the project (PUBKIT_SECRETS_PROJECT, which ./with-secrets
+process, finds the project (PUBRULES_SECRETS_PROJECT, which ./with-secrets
 sets, else with-secrets.json's), and gives the walk a writer, which keeps
 the token in this process only: Bitwarden's SDK takes each value in memory.
 
@@ -67,8 +67,8 @@ def token_file(path: str) -> str:
 
 def project_of(root: Path, env: Any) -> str | None:
     """The Bitwarden project the walk writes to: the one ./with-secrets read, else with-secrets.json's."""
-    if env.get("PUBKIT_SECRETS_PROJECT"):
-        return env["PUBKIT_SECRETS_PROJECT"]
+    if env.get("PUBRULES_SECRETS_PROJECT"):
+        return env["PUBRULES_SECRETS_PROJECT"]
     try:
         project = json.loads((Path(root) / "with-secrets.json").read_text(encoding="utf-8")).get("project")
     except (OSError, ValueError, AttributeError):

@@ -8,8 +8,8 @@
     pubsec types
     pubsec --version
 
-A repository runs its pinned pubsec as ./pubsec, which pubkit's `sync` writes
-beside ./pubkit, and its ./with-secrets runs `./pubsec run`. The deploy need
+A repository runs its pinned pubsec as ./pubsec, which pubrules's `sync` writes
+beside ./pubrules, and its ./with-secrets runs `./pubsec run`. The deploy need
 types (`pubsec types`) are installed for pubdeploy's walk, which loads them by
 their `sustenaut.needs` entry points.
 """
@@ -25,7 +25,7 @@ from pathlib import Path
 
 from . import __version__
 
-CONFIG = "pubkit.json"
+CONFIG = "pubrules.json"
 
 
 def read_config(root: Path) -> dict:
@@ -88,7 +88,7 @@ def main(argv: list[str] | None = None) -> int:
     commands = parser.add_subparsers(dest="command", required=True)
     commands.add_parser("run", help="run one command with with-secrets.json's Bitwarden secrets in its "
                                     "environment: run [--cwd DIR] -- COMMAND")
-    p = commands.add_parser("app-secrets", help="send the secrets this repository's pubkit.json "
+    p = commands.add_parser("app-secrets", help="send the secrets this repository's pubrules.json "
                                                 "names to it, through ./with-secrets")
     p.add_argument("--check", action="store_true", help="check the values, and send nothing")
     p = commands.add_parser("github-app", help="make a GitHub App from a manifest, and put its "
@@ -97,7 +97,7 @@ def main(argv: list[str] | None = None) -> int:
     p = github_app.add_parser("create", help="go through GitHub's app-manifest flow, in a browser, "
                                              "then write the app's id, key and installation id")
     p.add_argument("manifest", type=Path, metavar="MANIFEST",
-                   help="the app's manifest, with a pubkit section naming its owner, "
+                   help="the app's manifest, with a pubrules section naming its owner, "
                         "Bitwarden project and secret prefix")
     p.add_argument("--replace", action="store_true",
                    help="overwrite secrets that already have those names, instead of refusing")
@@ -114,7 +114,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--replace", action="store_true",
                    help="overwrite a secret that already has that name, instead of refusing")
     p.add_argument("--dry-run", action="store_true", help="show the plan, and do nothing")
-    p = commands.add_parser("signing-key", help="back up the signing keys pubkit.json declares to Bitwarden")
+    p = commands.add_parser("signing-key", help="back up the signing keys pubrules.json declares to Bitwarden")
     signing_key = p.add_subparsers(dest="signing_key_command", required=True)
     p = signing_key.add_parser("backup", help="write each declared key on this machine that its Bitwarden "
                                               "project lacks, never overwriting one")

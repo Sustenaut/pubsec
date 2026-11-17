@@ -1,6 +1,6 @@
 """pubsec's suite. The steps it does not define here (`it succeeds`, `it
-prints ...`) are pubkit's plugin's, and the deploy scenarios run pubsec's
-types through pubkit's own walk (steps/deploy_world.py).
+prints ...`) are pubrules's plugin's, and the deploy scenarios run pubsec's
+types through pubrules's own walk (steps/deploy_world.py).
 
 Steps and fixtures more than one steps module uses live here: the scratch
 repository, running the `pubsec` command in it, and its files. pytest-bdd

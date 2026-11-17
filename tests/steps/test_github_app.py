@@ -1,7 +1,7 @@
 """Steps for `pubsec github-app create`, end to end against fakes: a bws on PATH,
 which logs its arguments and environment and reads a key the way the real one does;
 a stand-in for Bitwarden's SDK on PYTHONPATH, which logs each write in the same form
-and refuses as the real one does; a browser, named by BROWSER, which follows the page pubkit
+and refuses as the real one does; a browser, named by BROWSER, which follows the page pubrules
 serves; and GitHub's API, an HTTP server on 127.0.0.1. Nothing reaches the network.
 
 A scenario runs in a session of its own, with no controlling terminal, so that
@@ -24,7 +24,7 @@ from conftest import pubsec
 from fake_reads import METHODS, READS, REFUSED_LIST
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from pubkit.plugin import Completed
+from pubtest.core import Completed
 
 scenarios("github-app.feature")
 
@@ -132,7 +132,7 @@ def key(tmp_path_factory):
 
 
 def verified(jwt: str, public, tmp_path) -> bool:
-    """Whether openssl, not pubkit's own code, finds it signed by the key, for this app and not expired."""
+    """Whether openssl, not pubrules's own code, finds it signed by the key, for this app and not expired."""
     head, claims, signature = jwt.split(".")
     decode = lambda part: base64.urlsafe_b64decode(part + "=" * (-len(part) % 4))  # noqa: E731
     sig = tmp_path / "jwt.sig"
@@ -232,7 +232,7 @@ def _write(repo, api, section, name="the-app"):
     (repo / "app.json").write_text(json.dumps({
         "name": name, "url": "https://example.org", "public": False,
         "default_permissions": {"contents": "read"},
-        "pubkit": {"bitwarden_project": "the-project", "secret_prefix": "the-app", **section}}))
+        "pubrules": {"bitwarden_project": "the-project", "secret_prefix": "the-app", **section}}))
 
 
 @given(parsers.parse('a manifest for the org "{owner}"'))
@@ -403,10 +403,10 @@ def posted_to(tmp_path, url):
     assert browser(tmp_path)[0]["posted_to"] == url
 
 
-@then("GitHub was sent the manifest with a redirect to 127.0.0.1 and no pubkit section")
+@then("GitHub was sent the manifest with a redirect to 127.0.0.1 and no pubrules section")
 def sent_manifest(tmp_path):
     manifest = browser(tmp_path)[0]["manifest"]
-    assert "pubkit" not in manifest
+    assert "pubrules" not in manifest
     assert manifest["name"] == "the-app"
     assert manifest["default_permissions"] == {"contents": "read"}
     assert manifest["redirect_url"].startswith("http://127.0.0.1:")
