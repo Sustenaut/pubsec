@@ -5,7 +5,7 @@ through ./with-secrets, and never shown.
 
 A fulfil sets what the secrets and github_app blocks name, as
 `pubsec app-secrets` does (ctx.send, the value on gh's standard
-input), from the environment ./with-secrets gives. A variable pubkit.json's
+input), from the environment ./with-secrets gives. A variable pubrules.json's
 variables block declares is the state file's, so its fulfil only proposes."""
 
 from __future__ import annotations
@@ -19,8 +19,8 @@ GITHUB_NAME = {"type": "string", "pattern": r"^(?!GITHUB_)[A-Z_][A-Z0-9_]*$",
 FROM = {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9_.-]*$", "x-phrase": "must be a secret's name"}
 ENVIRONMENT = {"type": "string", "pattern": r"^[A-Za-z0-9][A-Za-z0-9_.-]*$",
                "x-phrase": "must be an environment's name"}
-# The names the server's deploy job reads, and how each is kept on GitHub. pubkit
-# keeps the same table (pubkit/deploy/implied.py, DEPLOY_SETTINGS), which implies
+# The names the server's deploy job reads, and how each is kept on GitHub. pubrules
+# keeps the same table (pubrules/deploy/implied.py, DEPLOY_SETTINGS), which implies
 # this need from it: a change to one is made in both.
 DEPLOY_SETTINGS = {"SUSTENAUT_SERVER": "variable", "SUSTENAUT_KNOWN_HOSTS": "variable",
                    "SUSTENAUT_DEPLOY_SSH_KEY": "secret", "TS_GH_OAUTH_CLIENT_ID": "secret",
@@ -55,7 +55,7 @@ def entries(ctx: Any) -> list[dict[str, Any]]:
 
 def send(ctx: Any, kind: str, name: str, source: str, environment: str | None) -> Result:
     """Set one secret or variable from Bitwarden's value of `source`."""
-    value = ctx.env.get(env_name(source)) if ctx.env.get("PUBKIT_SECRETS_PROJECT") else None
+    value = ctx.env.get(env_name(source)) if ctx.env.get("PUBRULES_SECRETS_PROJECT") else None
     if value is None:
         return Result("missing", f"{source} is not in this walk's environment",
                       fix=f"put {source} in Bitwarden, and run the walk through ./with-secrets")
@@ -124,7 +124,7 @@ class GitHubVariable(GitHubSecret):
         repo = ctx.slug.rsplit("/", 1)[-1] if ctx.slug else "REPOSITORY"
         return Result("missing", f"variable {name} is the state file's",
                       fix=f"in the owner's state file, under \"{repo}\": add to its variables\n"
-                          f"  \"{name}\": <its value>\nthen pubkit variables --apply {repo}")
+                          f"  \"{name}\": <its value>\nthen pubrules variables --apply {repo}")
 
     def check(self, need: Any, ctx: Any) -> Result:
         if not ctx.slug:
@@ -142,7 +142,7 @@ class GitHubVariable(GitHubSecret):
         value = found.get("value") if isinstance(found, dict) else None
         if need.params.get("declared") and not value:
             return Result("missing", f"variable {name} is empty in {where(ctx.slug, env)}",
-                          fix="give it its value in the state file, then pubkit variables --apply")
+                          fix="give it its value in the state file, then pubrules variables --apply")
         wanted = ctx.env.get(env_name(source)) if source else None
         if wanted is not None and wanted != value:
             return Result("drift", f"variable {name} in {where(ctx.slug, env)} is not Bitwarden's {source}",
@@ -193,7 +193,7 @@ class DeploySettings(Base):
             named = {e["to"] for e in entries(ctx)}
             return Result("missing", f"{', '.join(missing)} {'is' if len(missing) == 1 else 'are'} set neither "
                                      f"in {ctx.slug} nor its {env} environment",
-                          fix="name them in pubkit.json's secrets block, then ./with-secrets ./pubsec app-secrets",
+                          fix="name them in pubrules.json's secrets block, then ./with-secrets ./pubsec app-secrets",
                           fixable=all(m in named for m in missing))
         return Result("ready", f"the {len(DEPLOY_SETTINGS)} deploy settings are set in {ctx.slug} or its {env} "
                                "environment")
@@ -207,7 +207,7 @@ class DeploySettings(Base):
             entry = sent.get(name)
             if entry is None:
                 return Result("missing", f"the secrets block does not name {name}",
-                              fix="name it in pubkit.json's secrets block")
+                              fix="name it in pubrules.json's secrets block")
             made = send(ctx, entry["kind"], name, entry["from"], entry.get("environment"))
             if made.state != "ready":
                 return made

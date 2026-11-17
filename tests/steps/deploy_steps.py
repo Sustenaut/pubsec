@@ -88,7 +88,7 @@ def reversed_needs(world):
     world.block["needs"].reverse()
 
 
-@given(parsers.parse('pubkit.json\'s github_app block names the app "{app}"'))
+@given(parsers.parse('pubrules.json\'s github_app block names the app "{app}"'))
 def github_app(world, app):
     upper = app.upper().replace("-", "_")
     world.config["github_app"] = {slot: {"from": f"{app}-{slot.replace('_', '-')}", "to": f"{upper}_{slot.upper()}"}
@@ -102,10 +102,10 @@ def only_secret(world, to):
 
 @given("the example service's managed files are in step")
 def in_step(world, capsys):
-    """pubkit init's files, then sync's. sync is given no --zones, so the
+    """pubrules init's files, then sync's. sync is given no --zones, so the
     host's zone is in no hosting block it reads."""
-    from pubkit.cli import main  # noqa: PLC0415
-    (world.root / "pubkit.json").unlink()
+    from pubrules.cli import main  # noqa: PLC0415
+    (world.root / "pubrules.json").unlink()
     assert main(["init", "--kind=service", "--project=example"]) == 0
     world.save()
     assert main(["sync"]) == 0
@@ -194,7 +194,7 @@ def offers_bad(offered, dist, part, value):
 
 
 @when(parsers.re(r'I run pubdeploy (?P<args>(?:"[^"]*" ?)+)'), target_fixture="result")
-def run_pubkit(world, capsys, args):
+def run_pubrules(world, capsys, args):
     argv = args.strip().strip('"').split('" "')
     code = run(world, capsys, *argv)
     return SimpleNamespace(code=code, stdout=world.stdout, stderr=world.stderr)
@@ -621,7 +621,7 @@ def bitwarden_lacks(world, name):
 
 @given("the environment is not ./with-secrets'")
 def outside(world):
-    del world.env["PUBKIT_SECRETS_PROJECT"]
+    del world.env["PUBRULES_SECRETS_PROJECT"]
 
 
 @given(parsers.parse('the need "{need_id}" has the shape "{shape}"'))
@@ -766,7 +766,7 @@ def gh_set(world, kind, name):
 
 @then(parsers.parse('a Job was made from the CronJob "{name}"'))
 def job_made(world, name):
-    assert any(j.startswith(f"{name}-pubkit-") for j in world.cluster.get("jobs", [])), world.cluster.get("jobs")
+    assert any(j.startswith(f"{name}-pubrules-") for j in world.cluster.get("jobs", [])), world.cluster.get("jobs")
 
 
 @then(parsers.parse('stderr does not mention "{text}"'))
@@ -954,7 +954,7 @@ def caller(version: str, deploys: str, push: bool, dispatch: bool = True) -> str
     permissions = "permissions: { contents: read, packages: write }\n" if push else (
         "permissions: { actions: read, contents: read, packages: write }\n")
     return (f"name: deploy\n{on}{permissions}jobs:\n  deploy:\n"
-            f"    uses: example-org/pubkit/.github/workflows/k8s-deploy.yml@{version}\n"
+            f"    uses: example-org/pubrules/.github/workflows/k8s-deploy.yml@{version}\n"
             f"    with:\n      image: ghcr.io/example-org/example\n      deploys: |\n{lines}    secrets: inherit\n")
 
 
@@ -986,7 +986,7 @@ class FakeHeads:
         world.storage["signed_in"].append((base, tenant, token))
 
     def upload(self, data):
-        from pubkit.board_publish import Refused  # noqa: PLC0415
+        from pubrules.board_publish import Refused  # noqa: PLC0415
         if self.world.storage.get("refuse"):
             raise Refused(403, b"no")
         self.world.storage["files"].append((self.tenant, json.loads(data)))
@@ -1008,7 +1008,7 @@ class FakeHeads:
 @pytest.fixture(autouse=True)
 def storage(world, monkeypatch):
     world.storage = {"signed_in": [], "files": [], "heads": {}, "moves": []}
-    world.env["PUBKIT_STORAGE_TOKEN"] = f"{CANARY}-storage-token"
+    world.env["PUBRULES_STORAGE_TOKEN"] = f"{CANARY}-storage-token"
     world.values.append(f"{CANARY}-storage-token")
     monkeypatch.setattr("pubdeploy.store.Heads", lambda base, tenant, token: FakeHeads(world, base, tenant, token))
 
@@ -1030,7 +1030,7 @@ def storage_refuses(world):
 
 @given("there is no storage token")
 def no_storage_token(world):
-    del world.env["PUBKIT_STORAGE_TOKEN"]
+    del world.env["PUBRULES_STORAGE_TOKEN"]
 
 
 @then(parsers.parse('storage was given a deploy-journal/2 document as a file of "{tenant}"'))

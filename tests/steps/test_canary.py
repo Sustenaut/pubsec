@@ -38,7 +38,7 @@ STATES = {
     "nothing reachable": lambda w: w.http.clear(),
     "kubectl forbidden": lambda w: w.cluster.update({"forbidden": True}),
     "GitHub forbidden": lambda w: w.github.update({"forbidden": True}),
-    "outside with-secrets": lambda w: w.env.pop("PUBKIT_SECRETS_PROJECT"),
+    "outside with-secrets": lambda w: w.env.pop("PUBRULES_SECRETS_PROJECT"),
     "nothing in the cluster": lambda w: w.cluster["namespaces"].pop("example") and None,
     "no cookie in Bitwarden, nor its Secret": lambda w: w.env.pop("EXAMPLE_COOKIE_SECRET") and
     w.cluster["namespaces"]["example"]["secrets"].pop("example-page-secrets") and None,
@@ -188,7 +188,7 @@ def the_hook_without_a_terminal_or_a_project_asks_nothing(world, monkeypatch):
     monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: pytest.fail("asked for a token"))
     ctx = world.context()
     assert pubsec.walk.prepare(ctx, [], False) is None and ctx.bitwarden_writer is None
-    ctx.env.pop("PUBKIT_SECRETS_PROJECT")
+    ctx.env.pop("PUBRULES_SECRETS_PROJECT")
     said = pubsec.walk.prepare(ctx, [], True)
     assert ctx.bitwarden_writer is None and "no Bitwarden project" in said
 

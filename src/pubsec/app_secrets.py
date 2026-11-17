@@ -1,4 +1,4 @@
-"""`pubsec app-secrets`: send what this repository's pubkit.json names to it.
+"""`pubsec app-secrets`: send what this repository's pubrules.json names to it.
 
 A repository names the values, so pubsec names nothing of anyone's. `github_app`
 is one GitHub App's three values, or a list of apps; `secrets` is any others:
@@ -157,14 +157,14 @@ def origin() -> str:
 
 def run(config: dict, check: bool) -> int:
     if BLOCK not in config and OTHERS not in config:
-        print(f"pubsec app-secrets: pubkit.json has no {BLOCK} block or {OTHERS} list")
+        print(f"pubsec app-secrets: pubrules.json has no {BLOCK} block or {OTHERS} list")
         return 1
     if bad := config_problems(config):
-        print(f"pubsec app-secrets: pubkit.json: {'; '.join(bad)}")
+        print(f"pubsec app-secrets: pubrules.json: {'; '.join(bad)}")
         return 1
     items = plan(config)
     if not items:
-        print(f"pubsec app-secrets: pubkit.json's {OTHERS} list is empty")
+        print(f"pubsec app-secrets: pubrules.json's {OTHERS} list is empty")
         return 1
     failed = False
     values = {}
@@ -182,7 +182,7 @@ def run(config: dict, check: bool) -> int:
             print(f"  ok       {name} ({len(value)} characters)")
             values[name] = value
     if failed:
-        print("Nothing was written. Fix those in Bitwarden, or the names in pubkit.json, and run "
+        print("Nothing was written. Fix those in Bitwarden, or the names in pubrules.json, and run "
               "this through ./with-secrets, which reads them.")
         return 1
     if check:

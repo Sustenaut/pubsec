@@ -19,7 +19,7 @@ from conftest import pubsec
 from fake_reads import METHODS, READS, REFUSED_LIST
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from pubkit.plugin import Completed
+from pubtest.core import Completed
 
 scenarios("signing-key.feature")
 
@@ -91,7 +91,7 @@ def fakes(tmp_path, env):
 
 def _declare(repo, entries, key=CORPUS_KEY):
     repo.mkdir(parents=True, exist_ok=True)
-    (repo / "pubkit.json").write_text(json.dumps({"kind": "utility", "signing_keys": entries}))
+    (repo / "pubrules.json").write_text(json.dumps({"kind": "utility", "signing_keys": entries}))
     if key is not None:
         (repo / "corpus" / ".publet").mkdir(parents=True, exist_ok=True)
         (repo / "corpus" / ".publet" / "signing.key").write_text(key)
@@ -163,11 +163,11 @@ def holds_other(env, value, name):
     env["BWS_EXISTING"] = json.dumps([{"id": "s1", "key": name, "value": value}])
 
 
-@given(parsers.parse("its pubkit.json's signing_keys is {block}"))
+@given(parsers.parse("its pubrules.json's signing_keys is {block}"))
 def block(repo, block):
-    config = json.loads((repo / "pubkit.json").read_text())
+    config = json.loads((repo / "pubrules.json").read_text())
     config["signing_keys"] = json.loads(block)
-    (repo / "pubkit.json").write_text(json.dumps(config))
+    (repo / "pubrules.json").write_text(json.dumps(config))
 
 
 def _backup(cwd, env, token, *flags):

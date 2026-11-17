@@ -1,7 +1,7 @@
 """bitwarden.secret and bitwarden.generated: a secret is in the Bitwarden
 project ./with-secrets reads, by name, without calling bws: with-secrets
 exports every secret of its project into the command's environment, and
-says so with PUBKIT_SECRETS_PROJECT, so
+says so with PUBRULES_SECRETS_PROJECT, so
 
     ./with-secrets ./pubdeploy check
 
@@ -23,7 +23,7 @@ from typing import Any
 from . import Base, Result, env_name, schema, with_secret
 from .k8s import SHAPE, SHAPES
 
-MARKER = "PUBKIT_SECRETS_PROJECT"
+MARKER = "PUBRULES_SECRETS_PROJECT"
 
 
 def generate(shape: str) -> str:

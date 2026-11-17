@@ -1,6 +1,6 @@
 Feature: pubsec signing-key backup copies the signing keys repositories declare to Bitwarden
   A repository names each signing key it uses, and the Bitwarden project and
-  secret it is backed up to, in pubkit.json's signing_keys. `pubsec
+  secret it is backed up to, in pubrules.json's signing_keys. `pubsec
   signing-key backup` writes each declared key that is on this machine and not
   yet in its project, from memory, with the token typed at a hidden prompt. It
   never overwrites a secret, and never prints a key.
@@ -39,11 +39,11 @@ Feature: pubsec signing-key backup copies the signing keys repositories declare 
     And it prints "another value is stored under this name; not overwritten"
     And the SDK wrote nothing
 
-  Scenario: A corpus key pubkit.json does not declare is pointed out
+  Scenario: A corpus key pubrules.json does not declare is pointed out
     Given a repository with a corpus key it does not declare
     When I run pubsec "signing-key" "backup" "--dry-run"
     Then it succeeds
-    And it prints "a signing key pubkit.json does not declare"
+    And it prints "a signing key pubrules.json does not declare"
 
   Scenario: A key outside the repository is declared with a path from home
     Given a repository that declares "~/.config/demo/facts.key" as "pub-signing-key-facts" in the project "the-project"

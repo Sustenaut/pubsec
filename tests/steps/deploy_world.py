@@ -1,6 +1,6 @@
 """The world `pubdeploy` scenarios run in, with pubsec's types: the
 example service of tests/fixtures/deploy-app, copied, and fakes for
-everything a check touches. The walk is pubkit's own, and the seven types
+everything a check touches. The walk is pubrules's own, and the seven types
 pubsec offers reach it as they do in use, by their `sustenaut.needs` entry
 points. kubectl answers from namespaces of Secrets, service accounts,
 Deployments and CronJobs; the GitHub API from secrets, variables and
@@ -60,7 +60,7 @@ def good_github() -> dict[str, Any]:
 
 
 def good_env() -> dict[str, str]:
-    return {"PUBKIT_SECRETS_PROJECT": "example", "EXAMPLE_COOKIE_SECRET": COOKIE.decode(),
+    return {"PUBRULES_SECRETS_PROJECT": "example", "EXAMPLE_COOKIE_SECRET": COOKIE.decode(),
             "EXAMPLE_FILES_TOKEN": f"{CANARY}-token", "EXAMPLE_USER": f"{CANARY}-user",
             "EXAMPLE_TOKEN": f"{CANARY}-token", "SUSTENAUT_SERVER": "server.example.eu"}
 
@@ -78,7 +78,7 @@ class FakeKubectl:
     def __call__(self, args: list[str], input: bytes | None = None) -> Ran:  # noqa: A002
         import time  # noqa: PLC0415
         self.calls.append(args)
-        if input is not None:
+        if input is not None and "diff" not in args:  # a dry run's manifests write nothing
             self.state.setdefault("stdin", []).append(input)
         raw = list(args)
         args = [a for a in args if a not in ("-o", "json", "name")]
@@ -88,6 +88,12 @@ class FakeKubectl:
             return Ran(127, "", "kubectl did not run (FileNotFoundError)")
         if self.state["forbidden"]:
             return Ran(1, "", 'Error from server (Forbidden): User "someone" cannot get resource')
+        if args[:2] == ["get", "--raw"]:
+            # The cluster's service-account signing keys, by kid.
+            if self.state.get("jwks") == "garbled":
+                return Ran(0, json.dumps({"keys": "none"}))
+            return Ran(0, json.dumps({"keys": [{"kid": k, "kty": "RSA", "n": n, "e": "AQAB"}
+                                               for k, n in self.state.get("jwks", {"key-a": "n-a"}).items()]}))
         if args[:2] == ["get", "namespace"]:
             ns = args[2]
             if ns in self.state["namespaces"]:
@@ -101,6 +107,11 @@ class FakeKubectl:
             return self.write(ns, verb, rest, input, space)
         kind = rest[0]
         name = rest[1] if len(rest) > 1 else None
+        if kind == "secrets" and "--no-headers" in rest:
+            # The namespace's Secrets as custom columns, names and types: asked for any other
+            # way, the walk would hold their values, which it never may.
+            assert "--no-headers" in raw and "custom-columns=NAME:.metadata.name,TYPE:.type" in raw, raw
+            return Ran(0, "".join(f"{n}   Opaque\n" for n in sorted((space or {}).get("secrets", {}))))
         if kind in ("deployment", "job") and name is None:
             return Ran(0, json.dumps({"items": (space or {}).get(kind, [])}))
         if "/" in kind:
@@ -143,8 +154,12 @@ class FakeKubectl:
             return Ran(1, "", f'Error from server (Forbidden): cannot {verb} in "{ns}"')
         if space is None:
             return Ran(1, "", f'Error from server (NotFound): namespaces "{ns}" not found')
+        if verb == "diff":
+            if self.state.get("client_side_owned") and "--force-conflicts" not in rest:
+                return Ran(2, "", 'error: Apply failed with 1 conflict: conflict with "kubectl-client-side-apply"')
+            return Ran(self.state.get("diff_code", 0), self.state.get("diff_out", ""), self.state.get("diff_err", ""))
         if verb == "apply":
-            assert rest == ["-f", "-"] and input is not None, rest
+            assert rest in (["-f", "-"], ["--server-side", "--force-conflicts", "-f", "-"]) and input is not None, rest
             out = []
             for doc in yaml.safe_load_all(input.decode()):
                 if doc.get("kind") == "Secret":
@@ -190,9 +205,24 @@ class FakeServer:
                                                          "objects": set()})
             for kind in ("serviceaccount", "role", "rolebinding"):
                 w.cluster["namespaces"][args[1]][kind].add("deploy")
+            w.cluster.setdefault("kubeconfigs", set()).add(args[1])
             return Ran(0, f"namespace {args[1]} ready")
+        if args[:2] == ["test", "-f"] and args[2].startswith("/home/deploy/.kube/"):
+            ns = args[2].rsplit("/", 1)[1]
+            known = w.cluster.get("kubeconfigs")
+            return Ran(0 if known is None or ns in known else 1, "")
         if args[:3] == ["python3", "-I", "-"] and "--status" in args:
             return Ran(0, json.dumps(w.auth))
+        if args[:3] == ["python3", "-I", "-"] and "--site-status" in args:
+            if w.site is None:
+                return Ran(2, "no registration: /root/.config/example-auth/team/client.json is not there")
+            given = {args[i]: args[i + 1] for i in range(len(args) - 1) if args[i] in ("--redirect", "--logout", "--role")}
+            lines = [f"{kind} {given['--' + kind]}: {'present' if kind in w.site else 'missing'}"
+                     for kind in ("redirect", "logout", "role")]
+            return Ran(0 if all(k in w.site for k in ("redirect", "logout", "role")) else 1, "\n".join(lines))
+        if args[:3] == ["python3", "-I", "-"] and "--redirect" in args:
+            w.site = {"redirect", "logout", "role"}
+            return Ran(0, json.dumps({"status": "ok", "client_id": "example.eu"}))
         if args[:3] == ["python3", "-I", "-"] and args[3].endswith("/client.json"):
             assert input is not None and b"k3s" in input and len(args) == 6, args
             name, ns = args[4], args[5]
@@ -313,7 +343,7 @@ class World:
 
     def __init__(self, root: Path) -> None:
         self.root = root
-        self.config = json.loads((root / "pubkit.json").read_text())
+        self.config = json.loads((root / "pubrules.json").read_text())
         self.rendered = (root / "rendered.yaml").read_text()
         self.render_error: Stop | None = None
         self.cluster = good_cluster()
@@ -355,7 +385,7 @@ class World:
         return next(n for n in self.block["needs"] if n["type"] == kind)
 
     def save(self) -> None:
-        (self.root / "pubkit.json").write_text(json.dumps(self.config, indent=2))
+        (self.root / "pubrules.json").write_text(json.dumps(self.config, indent=2))
 
     def render(self) -> str:
         if self.render_error:

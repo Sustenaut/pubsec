@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pubsec"
 version = "0.2.5"
-description = "The commands and deploy need types that hold a secret value, a write token or a private key, apart from pubkit."
+description = "The commands and deploy need types that hold a secret value, a write token or a private key, apart from pubrules."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -21,7 +21,7 @@ Repository = "https://github.com/Sustenaut/pubsec"
 [project.scripts]
 pubsec = "pubsec.cli:main"
 
-# Each an instance, which pubkit's walk calls, never a class.
+# Each an instance, which pubrules's walk calls, never a class.
 [project.entry-points."sustenaut.needs"]
 bitwarden-secret = "pubsec.needs.bitwarden:bitwarden_secret"
 bitwarden-generated = "pubsec.needs.bitwarden:bitwarden_generated"

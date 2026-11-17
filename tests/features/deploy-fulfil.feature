@@ -126,5 +126,5 @@ Feature: pubdeploy walk --fulfil makes what pubsec's needs lack, once the plan i
     Given GitHub holds no variable "EXAMPLE_SETTING"
     When I run pubdeploy "walk" "--fulfil" "--yes"
     Then "github.variable:EXAMPLE_SETTING" is missing
-    And it prints "then pubkit variables --apply example"
+    And it prints "then pubrules variables --apply example"
     And stderr does not mention "github.variable:EXAMPLE_SETTING"

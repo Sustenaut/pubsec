@@ -1,5 +1,5 @@
 # Bitwarden's Python SDK and what it needs, by hash, on every platform, for the
-# commands that write secrets (bitwarden.py). It is not a dependency of pubkit: only
+# commands that write secrets (bitwarden.py). It is not a dependency of pubrules: only
 # those commands fetch it. Regenerate with:
 #   uv pip compile --universal --generate-hashes --python-version 3.11 --no-header --no-annotate
 

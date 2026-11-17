@@ -1,10 +1,10 @@
-"""The need types pubsec offers pubkit's deploy walk, and what they share.
+"""The need types pubsec offers pubrules's deploy walk, and what they share.
 
 Each is installed under the entry-point group `sustenaut.needs` as an
 instance, and the walk reaches it through the provider contract alone (the
 names pubdeploy's README lists under "Provider contract"): a check or a fulfil
 uses the Context it is given by attribute, and returns a Result, pubsec's
-own, with the fields the walk reads. Nothing here imports pubkit.
+own, with the fields the walk reads. Nothing here imports pubrules.
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from typing import Any
 FULFIL_BUDGET = 60.0  # seconds, for a type that declares none
 SUMMARY = 120  # the longest summary, in characters, as the walk keeps it
 
-# A need's secret: the Kubernetes Secret it fills, as pubkit's deploy block
+# A need's secret: the Kubernetes Secret it fills, as pubrules's deploy block
 # schema gives it, so the schema of a type here checks it the same way.
 SECRET: dict[str, Any] = {
     "type": "object", "required": ["name"], "additionalProperties": False,

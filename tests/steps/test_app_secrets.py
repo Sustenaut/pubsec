@@ -54,14 +54,14 @@ def _calls(log):
 
 @given(parsers.parse('a clone of "{slug}" whose github_app block names an app'))
 def clone(repo, log, slug):
-    (repo / "pubkit.json").write_text(json.dumps({"kind": "utility", "github_app": BLOCK}))
+    (repo / "pubrules.json").write_text(json.dumps({"kind": "utility", "github_app": BLOCK}))
     subprocess.run(["git", "init", "-q", "."], cwd=repo, check=True)
     subprocess.run(["git", "remote", "add", "origin", f"https://github.com/{slug}.git"], cwd=repo,
                    check=True)
 
 
 def _clone(repo, slug, config):
-    (repo / "pubkit.json").write_text(json.dumps({"kind": "utility", **config}))
+    (repo / "pubrules.json").write_text(json.dumps({"kind": "utility", **config}))
     subprocess.run(["git", "init", "-q", "."], cwd=repo, check=True)
     subprocess.run(["git", "remote", "add", "origin", f"https://github.com/{slug}.git"], cwd=repo, check=True)
 
@@ -110,11 +110,11 @@ def refuses(env, name):
     env["GH_REFUSE"] = name
 
 
-@given("its pubkit.json has a sound github_app block")
+@given("its pubrules.json has a sound github_app block")
 def sound(repo):
-    config = json.loads((repo / "pubkit.json").read_text())
+    config = json.loads((repo / "pubrules.json").read_text())
     config["github_app"] = BLOCK
-    (repo / "pubkit.json").write_text(json.dumps(config))
+    (repo / "pubrules.json").write_text(json.dumps(config))
 
 
 @then(parsers.parse('gh set the {kind} "{name}" in the environment "{environment}" of "{slug}"'))

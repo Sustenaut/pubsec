@@ -8,7 +8,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     When I create the app, giving the token "write-token" and answering "yes"
     Then it succeeds
     And the browser posted to "https://github.com/organizations/example-org/settings/apps/new"
-    And GitHub was sent the manifest with a redirect to 127.0.0.1 and no pubkit section
+    And GitHub was sent the manifest with a redirect to 127.0.0.1 and no pubrules section
     And the browser opened "https://github.com/apps/the-app/installations/new"
     And GitHub was asked for the installations with a JWT signed by the new key
     And the SDK created "the-app-app-id" as "5551234"
@@ -202,15 +202,15 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
       | manifest                                                                                                                | says                            |
       | not json                                                                                                                | is not JSON                     |
       | []                                                                                                                      | it must be an object            |
-      | {"name": "a", "url": "b"}                                                                                               | a "pubkit" section              |
-      | {"url": "b", "pubkit": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s"}}                                    | it needs "name"                 |
-      | {"name": "a", "url": "b", "redirect_url": "c", "pubkit": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s"}}  | "redirect_url" is not its to set |
-      | {"name": "a", "url": "b", "pubkit": {"bitwarden_project": "p", "secret_prefix": "s"}}                                   | one of "org" and "user"         |
-      | {"name": "a", "url": "b", "pubkit": {"org": "o", "user": "u", "bitwarden_project": "p", "secret_prefix": "s"}}          | one of "org" and "user"         |
-      | {"name": "a", "url": "b", "pubkit": {"org": "o/../x", "bitwarden_project": "p", "secret_prefix": "s"}}                  | is not an account's name        |
-      | {"name": "a", "url": "b", "pubkit": {"org": "o", "secret_prefix": "s"}}                                                 | needs "bitwarden_project"       |
-      | {"name": "a", "url": "b", "pubkit": {"org": "o", "bitwarden_project": "p", "secret_prefix": "Bad_Name"}}                | "secret_prefix" must be         |
-      | {"name": "a", "url": "b", "pubkit": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s", "extra": 1}}           | extra is not a pubkit setting   |
+      | {"name": "a", "url": "b"}                                                                                               | a "pubrules" section              |
+      | {"url": "b", "pubrules": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s"}}                                    | it needs "name"                 |
+      | {"name": "a", "url": "b", "redirect_url": "c", "pubrules": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s"}}  | "redirect_url" is not its to set |
+      | {"name": "a", "url": "b", "pubrules": {"bitwarden_project": "p", "secret_prefix": "s"}}                                   | one of "org" and "user"         |
+      | {"name": "a", "url": "b", "pubrules": {"org": "o", "user": "u", "bitwarden_project": "p", "secret_prefix": "s"}}          | one of "org" and "user"         |
+      | {"name": "a", "url": "b", "pubrules": {"org": "o/../x", "bitwarden_project": "p", "secret_prefix": "s"}}                  | is not an account's name        |
+      | {"name": "a", "url": "b", "pubrules": {"org": "o", "secret_prefix": "s"}}                                                 | needs "bitwarden_project"       |
+      | {"name": "a", "url": "b", "pubrules": {"org": "o", "bitwarden_project": "p", "secret_prefix": "Bad_Name"}}                | "secret_prefix" must be         |
+      | {"name": "a", "url": "b", "pubrules": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s", "extra": 1}}           | extra is not a pubrules setting   |
 
   Scenario: A manifest outside the repository is refused
     Given a manifest for the org "example-org"
@@ -261,7 +261,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     And the SDK wrote 3 secrets with the token "write-token"
 
   Scenario: keep_oauth_client must be true or false
-    Given the manifest reads {"name": "a", "url": "b", "pubkit": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s", "keep_oauth_client": "yes"}}
+    Given the manifest reads {"name": "a", "url": "b", "pubrules": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s", "keep_oauth_client": "yes"}}
     When I create the app, giving the token "write-token" and answering "yes"
     Then the exit code is 1
     And it prints "must be true or false"

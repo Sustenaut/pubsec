@@ -1,6 +1,6 @@
 """pubsec reaches pubdeploy's walk through the provider contract alone: the
 Context names pubdeploy's README lists under "Provider contract", and no import
-of pubkit or pubdeploy outside the tests. A name used here that the contract
+of pubrules or pubdeploy outside the tests. A name used here that the contract
 lacks, or such an import in pubsec's code, fails this."""
 
 from __future__ import annotations
@@ -24,8 +24,8 @@ def only_the_contract_is_used():
     assert used <= CONTRACT, used - CONTRACT
 
 
-@then("nothing of pubkit is imported")
-def nothing_of_pubkit_is_imported():
+@then("nothing of pubrules is imported")
+def nothing_of_pubrules_is_imported():
     for path in SOURCE.rglob("*.py"):
         for line in path.read_text().splitlines():
             assert not re.match(r"\s*(from|import)\s+pub(kit|deploy)\b", line), f"{path.name}: {line}"
