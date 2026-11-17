@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubsec 0.2.3 is released as v0.2.3 from commit 79dd6d93fee447aba313ddfa4cf9d02b3d316988.",
+      "content": "pubsec 0.2.4 is released as v0.2.4 from commit 43f83e6d2a891b44dc446246385801a41e7a93ce.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubsec",
-            "0.2.3",
+            "0.2.4",
             "pubsec --version",
-            "pubsec 0.2.3",
-            "v0.2.3",
-            "79dd6d93fee447aba313ddfa4cf9d02b3d316988"
+            "pubsec 0.2.4",
+            "v0.2.4",
+            "43f83e6d2a891b44dc446246385801a41e7a93ce"
           ]
         ]
       },
-      "scope": "the published release v0.2.3 of pubsec",
+      "scope": "the published release v0.2.4 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "79dd6d93fee447aba313ddfa4cf9d02b3d316988"
+          "revision": "43f83e6d2a891b44dc446246385801a41e7a93ce"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubsec 0.2.3 was released on 2026-11-16 from commit 79dd6d93fee447aba313ddfa4cf9d02b3d316988 with these changes.",
+      "content": "pubsec 0.2.4 was released on 2026-11-17 from commit 43f83e6d2a891b44dc446246385801a41e7a93ce with these changes.",
       "data": {
         "columns": [
           {
@@ -57,28 +57,24 @@
         ],
         "rows": [
           [
-            "fixed",
-            "gcp.service-account-key: a key an organization policy forbids (iam.disableServiceAccountKeyCreation) is blocked, naming the policy and the ways out, not missing with gcloud's last line"
-          ],
-          [
             "added",
-            "gcp.workload-identity (propose): a workload's Kubernetes ServiceAccount may act as a Google service account through a Workload Identity pool, read from the account's IAM policy; missing proposes the workloadIdentityUser grant and, with granted_in, the row that makes it"
+            "github-app create keeps the OAuth client id and secret GitHub returns, as <prefix>-client-id and <prefix>-client-secret, when the manifest says \"keep_oauth_client\": true"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.2.3 of pubsec",
+      "scope": "the published release v0.2.4 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "79dd6d93fee447aba313ddfa4cf9d02b3d316988"
+          "revision": "43f83e6d2a891b44dc446246385801a41e7a93ce"
         }
       ]
     }
   },
-  "created": "2026-11-16T00:00:00Z",
+  "created": "2026-11-17T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
