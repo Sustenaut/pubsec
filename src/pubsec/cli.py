@@ -57,11 +57,12 @@ def confined(path: Path, what: str) -> Path:
 
 def types() -> int:
     """The need types pubsec offers, as `pubdeploy types` lists them."""
+    from .needs.adopt import bitwarden_adopt  # noqa: PLC0415
     from .needs.bitwarden import bitwarden_generated, bitwarden_secret  # noqa: PLC0415
     from .needs.gcp import service_account_key, workload_identity  # noqa: PLC0415
     from .needs.github import deploy_settings, github_secret, github_variable  # noqa: PLC0415
     from .needs.k8s import secret  # noqa: PLC0415
-    offered = (bitwarden_secret, bitwarden_generated, service_account_key, workload_identity, github_secret,
+    offered = (bitwarden_secret, bitwarden_generated, bitwarden_adopt, service_account_key, workload_identity, github_secret,
                github_variable, deploy_settings, secret)
     rows = [("type", "grade", "budget", "offline", "fulfil", "keys")]
     for kind in sorted(offered, key=lambda k: k.type):

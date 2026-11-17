@@ -1,0 +1,4 @@
+{
+  "category": "added",
+  "change": "bitwarden.adopt: a need that keeps a value a cluster Secret already holds by copying it into Bitwarden (secret, format, shape, note); ready when Bitwarden has it, missing when the Secret holds a value to keep, blocked when it holds none; k8s.secret is not made again for it"
+}

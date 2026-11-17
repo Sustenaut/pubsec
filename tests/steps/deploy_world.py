@@ -213,6 +213,7 @@ class FakeWriter:
         if self.world.bitwarden_refuses:
             raise RuntimeError(f"Bitwarden said no to {name}")
         self.world.written[name] = value
+        self.world.notes[name] = note
         self.world.values.append(value)
 
 
@@ -330,6 +331,7 @@ class World:
         self.admin = True  # a command runs on the server
         self.auth: dict[str, Any] = {"status": "registered"}
         self.written: dict[str, str] = {}  # what the Bitwarden writer was given
+        self.notes: dict[str, str] = {}  # by name, the note each write gave
         self.bitwarden_refuses = False
         self.token = f"{CANARY}-write-token"
         self.writer: Any = None  # the context's writer; the command's comes from the token
