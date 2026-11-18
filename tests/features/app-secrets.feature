@@ -3,10 +3,14 @@ Feature: pubsec app-secrets sends what this repository names to it
   It checks them all, and writes none unless all pass. It never prints a value,
   and never puts one on a command line.
 
+  Background:
+    Given a scratch directory
+    And the program under test is "pubsec"
+
   Scenario: Three good values are sent to the repository origin points at
     Given a clone of "example-org/thing" whose github_app block names an app
     And Bitwarden has all three values
-    When I run pubsec "app-secrets"
+    When I run "pubsec app-secrets"
     Then it succeeds
     And gh set the variable "THE_APP_ID" in "example-org/thing"
     And gh set the variable "THE_APP_INSTALLATION_ID" in "example-org/thing"
@@ -17,7 +21,7 @@ Feature: pubsec app-secrets sends what this repository names to it
   Scenario: --check sends nothing
     Given a clone of "example-org/thing" whose github_app block names an app
     And Bitwarden has all three values
-    When I run pubsec "app-secrets" "--check"
+    When I run "pubsec app-secrets --check"
     Then it succeeds
     And it prints "ok       the-app-key ("
     And it prints "--check: nothing was written."
@@ -28,7 +32,7 @@ Feature: pubsec app-secrets sends what this repository names to it
     Given a clone of "example-org/thing" whose github_app block names an app
     And Bitwarden has all three values
     But Bitwarden's "<name>" is <what>
-    When I run pubsec "app-secrets"
+    When I run "pubsec app-secrets"
     Then the exit code is 1
     And it prints "<says>"
     And gh was called 0 times
@@ -46,7 +50,7 @@ Feature: pubsec app-secrets sends what this repository names to it
     Given a clone of "example-org/thing" whose github_app block names an app
     And Bitwarden has all three values
     And gh refuses "THE_APP_ID"
-    When I run pubsec "app-secrets"
+    When I run "pubsec app-secrets"
     Then the exit code is 1
     And it prints "FAILED   variable THE_APP_ID in example-org/thing"
     And gh set the secret "THE_APP_KEY" in "example-org/thing"
@@ -54,7 +58,7 @@ Feature: pubsec app-secrets sends what this repository names to it
   Scenario: Several apps and other values all go, by their own kinds
     Given a clone of "example-org/thing" that names two apps and two other values
     And Bitwarden has all those values
-    When I run pubsec "app-secrets"
+    When I run "pubsec app-secrets"
     Then it succeeds
     And it prints "Done: 8 values in example-org/thing."
     And gh set the secret "OTHER_APP_KEY" in "example-org/thing"
@@ -66,7 +70,7 @@ Feature: pubsec app-secrets sends what this repository names to it
   Scenario: A value can go in an environment, and the same name can be in two
     Given a clone of "example-org/thing" whose secrets list has "PLAIN_TOKEN" in the environment "server", and in the repository
     And Bitwarden has all those values
-    When I run pubsec "app-secrets"
+    When I run "pubsec app-secrets"
     Then it succeeds
     And gh set the secret "PLAIN_TOKEN" in the environment "server" of "example-org/thing"
     And gh set the secret "PLAIN_TOKEN" in "example-org/thing" with no environment
@@ -76,14 +80,14 @@ Feature: pubsec app-secrets sends what this repository names to it
     Given a clone of "example-org/thing" whose secrets list has "PLAIN_TOKEN" in the environment "server", and in the repository
     And Bitwarden has all those values
     And gh refuses "PLAIN_TOKEN"
-    When I run pubsec "app-secrets"
+    When I run "pubsec app-secrets"
     Then the exit code is 1
     And it prints "FAILED   secret PLAIN_TOKEN in example-org/thing, environment server"
 
   Scenario: Only other values, with no app, work too
     Given a clone of "example-org/thing" that names only "plain-token" as a secret
     And Bitwarden has all those values
-    When I run pubsec "app-secrets" "--check"
+    When I run "pubsec app-secrets --check"
     Then it succeeds
     And it prints "ok       plain-token ("
     And it prints "All 1 look right."
@@ -93,7 +97,7 @@ Feature: pubsec app-secrets sends what this repository names to it
     Given a clone of "example-org/thing" that names two apps and two other values
     And Bitwarden has all those values
     But Bitwarden's "<name>" is <what>
-    When I run pubsec "app-secrets"
+    When I run "pubsec app-secrets"
     Then the exit code is 1
     And it prints "<says>"
     And gh was called 0 times
@@ -104,8 +108,8 @@ Feature: pubsec app-secrets sends what this repository names to it
       | plain-user  | empty   | BAD      plain-user is empty |
 
   Scenario Outline: A wrong secrets list is refused
-    Given the file "pubrules.json" reads "{"kind": "utility", "secrets": <list>}"
-    When I run pubsec "app-secrets"
+    Given a file "pubrules.json" holding "{"kind": "utility", "secrets": <list>}"
+    When I run "pubsec app-secrets"
     Then the exit code is 1
     And it prints "<message>"
 
@@ -126,26 +130,26 @@ Feature: pubsec app-secrets sends what this repository names to it
       | [{"from": "a", "to": "A", "kind": "secret"}, {"from": "b", "to": "A", "kind": "secret"}] | two of them have the same |
 
   Scenario: An empty secrets list has nothing to send
-    Given the file "pubrules.json" reads "{"kind": "utility", "secrets": []}"
-    When I run pubsec "app-secrets"
+    Given a file "pubrules.json" holding "{"kind": "utility", "secrets": []}"
+    When I run "pubsec app-secrets"
     Then the exit code is 1
     And it prints "secrets list is empty"
 
   Scenario: An empty list of apps is refused
-    Given the file "pubrules.json" reads "{"kind": "utility", "github_app": []}"
-    When I run pubsec "app-secrets"
+    Given a file "pubrules.json" holding "{"kind": "utility", "github_app": []}"
+    When I run "pubsec app-secrets"
     Then the exit code is 1
     And it prints "it lists no apps"
 
   Scenario: A repository without the block is told so
-    Given the file "pubrules.json" reads "{"kind": "utility"}"
-    When I run pubsec "app-secrets"
+    Given a file "pubrules.json" holding "{"kind": "utility"}"
+    When I run "pubsec app-secrets"
     Then the exit code is 1
     And it prints "pubrules.json has no github_app block or secrets list"
 
   Scenario Outline: A bad block is refused
-    Given the file "pubrules.json" reads "{"kind": "utility", "github_app": <block>}"
-    When I run pubsec "app-secrets"
+    Given a file "pubrules.json" holding "{"kind": "utility", "github_app": <block>}"
+    When I run "pubsec app-secrets"
     Then the exit code is 1
     And it prints "<message>"
 

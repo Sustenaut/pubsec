@@ -75,181 +75,186 @@ def no_value(world):
     assert not world.leaked(), world.leaked()[0][:500]
 
 
-@then("an exception holding a value is not shown")
-def an_exception_holding_a_value_is_not_shown(world, capsys):
-    class Leaky:
-        type, grade, budget, offline, schema = "example.leaky", "none", 1.0, True, {}
+class Leaky:
+    """A need type that holds a value where it must not: in what its check, or its fulfil, raises."""
 
-        def default_name(self, params):
-            return None
+    type, budget, offline, schema = "example.leaky", 1.0, True, {}
 
-        def depends_on(self, need, needs):
-            return []
+    def __init__(self, raises_in: str) -> None:
+        self.raises_in = raises_in
+        self.grade = "none" if raises_in == "check" else "auto"
 
-        def check(self, need, ctx):
+    def default_name(self, params):
+        return None
+
+    def depends_on(self, need, needs):
+        return []
+
+    def check(self, need, ctx):
+        if self.raises_in == "check":
             raise ValueError(f"the value is {CANARY}")
+        return Result("missing", "not there")
 
-        def fulfil(self, need, ctx):
-            raise NotImplementedError("phase 2")
+    def fulfil(self, need, ctx):
+        raise ValueError(f"the value is {CANARY}")
 
-    need = Need("example.leaky", "one", {})
-    journal = walk({need.id: need}, {"example.leaky": Leaky()}, world.context(), service={})
+
+@given(parsers.parse("a need type whose {part} raises, holding a value"))
+def leaky(world, part):
+    world.leaky = Leaky(part)
+
+
+def _kept(world, journal) -> dict:
     world.journal = journal.document()
-    (_, result), = journal.entries
-    assert result.state == "unknown"
-    assert result.summary == "the check failed (ValueError)"
-    assert CANARY not in journal.json()
+    return world.journal
 
 
-@then("a value in the rendered manifests is not shown")
-def a_value_in_the_rendered_manifests_is_not_shown(world, capsys):
+@when("that need is walked")
+def leaky_walked(ctx, world):
+    need = Need("example.leaky", "one", {})
+    ctx.attempt(lambda: _kept(world, walk({need.id: need}, {"example.leaky": world.leaky}, world.context(),
+                                          service={})))
+
+
+@when("that need is walked and fulfilled")
+def leaky_fulfilled(ctx, world):
+    from pubdeploy.walk import fulfil  # noqa: PLC0415
+    need = Need("example.leaky", "one", {})
+    kinds = {"example.leaky": world.leaky}
+
+    def walked():
+        context = world.context()
+        return _kept(world, fulfil(walk({need.id: need}, kinds, context, service={}), kinds, context, {need.id}))
+    ctx.attempt(walked)
+
+
+@given("the rendered manifests hold a Secret with a value")
+def rendered_secret(world):
     world.rendered += ("---\napiVersion: v1\nkind: Secret\nmetadata: {name: example-held, namespace: example}\n"
                        f"stringData: {{cookie: {CANARY}}}\n")
-    run(world, capsys, "check", "--offline")
-    assert CANARY not in world.stdout + world.stderr
 
 
-@then("every result of the sound fixture is free of values")
-def every_result_of_the_sound_fixture_is_free_of_values(world):
-    ctx = world.context()
-    plan = load(world.root, world.config, ctx)
-    journal = walk(plan.needs, types(), ctx, service={})
-    world.journal = journal.document()
-    assert all(isinstance(r, Result) for _, r in journal.entries)
-    assert CANARY not in journal.json()
+@when("the fixture's needs are walked")
+def fixture_walked(ctx, world):
+    def walked():
+        context = world.context()
+        plan = load(world.root, world.config, context)
+        world.walked = walk(plan.needs, types(), context, service={})
+        return _kept(world, world.walked)
+    ctx.attempt(walked)
 
 
-@then("a fulfil that raises holding a value is not shown")
-def a_fulfil_that_raises_holding_a_value_is_not_shown(world):
-    from pubdeploy.walk import fulfil  # noqa: PLC0415
-
-    class Leaky:
-        type, grade, budget, offline, schema = "example.leaky", "auto", 1.0, True, {}
-
-        def default_name(self, params):
-            return None
-
-        def depends_on(self, need, needs):
-            return []
-
-        def check(self, need, ctx):
-            return Result("missing", "not there")
-
-        def fulfil(self, need, ctx):
-            raise ValueError(f"the value is {CANARY}")
-
-    need = Need("example.leaky", "one", {})
-    kinds = {"example.leaky": Leaky()}
-    ctx = world.context()
-    journal = fulfil(walk({need.id: need}, kinds, ctx, service={}), kinds, ctx, {need.id})
-    world.journal = journal.document()
-    (_, result), = journal.entries
-    assert result.state == "missing" and result.details[0].startswith("fulfil failed: the fulfil failed (ValueError)")
-    assert CANARY not in journal.json()
+@then("every need came to a result")
+def every_result(world):
+    assert world.walked.entries and all(isinstance(r, Result) for _, r in world.walked.entries)
 
 
-@then("generated values stay in the walk")
-def generated_values_stay_in_the_walk(world, capsys):
-    """ctx.values holds what a fulfil made: never journaled, printed or kept."""
+@given("Bitwarden holds no cookie")
+def no_cookie(world):
     world.env.pop("EXAMPLE_COOKIE_SECRET")
-    run(world, capsys, "walk", "--fulfil", "--yes", "--json")
+
+
+@then("the value the fulfil made stays in the walk")
+def made_stays(world):
+    """ctx.values holds what a fulfil made: never journaled, printed or kept."""
     made = world.written["example-cookie-secret"]
     assert made in world.values
     assert made not in "".join(world.outputs) + json.dumps(world.journal)
 
 
-@then("the types walked are pubsecs")
-def the_types_walked_are_pubsecs(world):
-    """The seven reach the walk by their entry points, as installed, and are pubsec's."""
+@when("the need types are loaded")
+def types_loaded(ctx):
+    """The seven reach the walk by their entry points, as installed: where each came from, and its package."""
     from pubdeploy.registry import load as registry  # noqa: PLC0415
     from deploy_world import OURS  # noqa: PLC0415
-    loaded = registry()
-    assert {kind: loaded.origin[kind] for kind in OURS} == dict.fromkeys(OURS, "pubsec"), loaded.warnings
-    assert all(type(loaded.types[kind]).__module__.startswith("pubsec.needs.") for kind in OURS)
+
+    def loaded():
+        found = registry()
+        return {kind: {"origin": found.origin[kind],
+                       "package": ".".join(type(found.types[kind]).__module__.split(".")[:2])} for kind in OURS}
+    ctx.attempt(loaded)
 
 
-@then("the hook asks once and says no token")
-def the_hook_asks_once_and_says_no_token(world, monkeypatch):
-    """prepare() asks for the token once in a process, for every unit, and keeps it out of what it says."""
+@given("a terminal that answers the write token")
+def terminal_answers(world, monkeypatch):
     import pubsec.walk  # noqa: PLC0415
-    asked: list[str] = []
-    monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: asked.append(prompt) or world.token)
-    first, second = world.context(), world.context()
-    assert pubsec.walk.prepare(first, [], True) is None
-    assert pubsec.walk.prepare(second, [], True) is None
-    assert len(asked) == 1 and "example" in asked[0]
-    assert first.bitwarden_writer is second.bitwarden_writer is not None
-    assert CANARY not in "".join(asked)
+    world.asked = []
+    monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: world.asked.append(prompt) or world.token)
 
 
-@then("the hook without a terminal or a project asks nothing")
-def the_hook_without_a_terminal_or_a_project_asks_nothing(world, monkeypatch):
+@given("a terminal that answers nothing")
+def terminal_empty(world, monkeypatch):
     import pubsec.walk  # noqa: PLC0415
+    world.asked = []
+    monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: world.asked.append(prompt) or "")
+
+
+@given("a terminal that must not be asked")
+def terminal_unasked(world, monkeypatch):
+    import pubsec.walk  # noqa: PLC0415
+    world.asked = []
     monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: pytest.fail("asked for a token"))
-    ctx = world.context()
-    assert pubsec.walk.prepare(ctx, [], False) is None and ctx.bitwarden_writer is None
-    ctx.env.pop("PUBRULES_SECRETS_PROJECT")
-    said = pubsec.walk.prepare(ctx, [], True)
-    assert ctx.bitwarden_writer is None and "no Bitwarden project" in said
 
 
-@then("without a terminal the token comes from the file alone")
-def without_a_terminal_the_token_comes_from_the_file_alone(world, monkeypatch, tmp_path):
-    import pubsec.walk  # noqa: PLC0415
-    monkeypatch.setattr(pubsec.walk, "_writers", {})
-    monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: pytest.fail("asked for a token"))
+@given("the walk names no Bitwarden project")
+def no_project(world):
+    world.env.pop("PUBRULES_SECRETS_PROJECT")
+
+
+@given("a write token file holding the write token, and the token in the environment too")
+def token_file(world, tmp_path):
     token = tmp_path / "write-token"
     token.write_text(world.token + "\n")
-    ctx = world.context()
-    ctx.env["PUBSEC_WRITE_TOKEN"] = "never-read"
-    ctx.env["PUBSEC_WRITE_TOKEN_FILE"] = str(token)
-    assert pubsec.walk.prepare(ctx, [], False) is None
-    assert ctx.bitwarden_writer is not None and world.token in (getattr(ctx.bitwarden_writer, "token", None), getattr(ctx.bitwarden_writer, "_token", None))
+    world.env.update({"PUBSEC_WRITE_TOKEN": "never-read", "PUBSEC_WRITE_TOKEN_FILE": str(token)})
 
 
-@then("a token file that cannot be read gives no writer")
-def a_token_file_that_cannot_be_read_gives_no_writer(world, monkeypatch, tmp_path):
+@given("a write token file that cannot be read")
+def token_file_gone(world, tmp_path):
+    world.env["PUBSEC_WRITE_TOKEN_FILE"] = str(tmp_path / "gone")
+
+
+@when(parsers.re(r"the hook prepares (?P<count>a unit|two units) (?P<how>with|without) a terminal"))
+def hook_prepares(ctx, world, count, how):
+    """What pubsec's sustenaut.walk hook said for each unit, what it asked, and the writers it gave them."""
     import pubsec.walk  # noqa: PLC0415
-    monkeypatch.setattr(pubsec.walk, "_writers", {})
-    ctx = world.context()
-    ctx.env["PUBSEC_WRITE_TOKEN_FILE"] = str(tmp_path / "gone")
-    said = pubsec.walk.prepare(ctx, [], False)
-    assert ctx.bitwarden_writer is None and "no Bitwarden write token" in said
+
+    def prepared():
+        contexts = [world.context() for _ in range(1 if count == "a unit" else 2)]
+        said = [pubsec.walk.prepare(c, [], how == "with") for c in contexts]
+        writers = [c.bitwarden_writer for c in contexts if c.bitwarden_writer is not None]
+        return {"said": said, "asked": getattr(world, "asked", []), "units with a writer": len(writers),
+                "writers": len({id(w) for w in writers}),
+                "token from the file": any(world.token in (getattr(w, "token", None), getattr(w, "_token", None))
+                                           for w in writers)}
+    ctx.attempt(prepared)
 
 
-@then("the hook with an empty token gives no writer")
-def the_hook_with_an_empty_token_gives_no_writer(world, monkeypatch):
-    import pubsec.walk  # noqa: PLC0415
-    monkeypatch.setattr(pubsec.walk, "ask_hidden", lambda prompt: "")
-    ctx = world.context()
-    said = pubsec.walk.prepare(ctx, [], True)
-    assert ctx.bitwarden_writer is None and "no Bitwarden write token" in said
-
-
-@then("the writer finds the secret by its identifier and writes in memory")
-def the_writer_finds_the_secret_by_its_identifier_and_writes_in_memory(monkeypatch):
-    """BitwardenWriter looks the name up among identifiers, reading no value,
-    and a refusal it raises holds neither the token nor the value."""
+@given(parsers.parse('Bitwarden\'s SDK, whose project holds "{name}" as "{secret}"'))
+def sdk(ctx, monkeypatch, name, secret):
     import pubsec.bitwarden  # noqa: PLC0415
     import pubsec.service_account_key  # noqa: PLC0415
-    from pubsec.walk import BitwardenWriter  # noqa: PLC0415
-    token, value = f"{CANARY}-write-token", f"{CANARY}-value"
-    calls: list[tuple] = []
+    ctx.calls = []
     monkeypatch.setattr(pubsec.bitwarden, "ensure", lambda: None)
-    monkeypatch.setattr(pubsec.service_account_key, "find_project", lambda t, name: ("project-id", "org-id"))
-    monkeypatch.setattr(pubsec.bitwarden, "names", lambda t, org, project: calls.append(("names", org, project))
-                        or {"example-key": ["secret-id"]})
+    monkeypatch.setattr(pubsec.service_account_key, "find_project", lambda t, project: ("project-id", "org-id"))
+    monkeypatch.setattr(pubsec.bitwarden, "names", lambda t, org, project: ctx.calls.append(["names", org, project])
+                        or {name: [secret]})
     monkeypatch.setattr(pubsec.bitwarden, "values", lambda t, ids: pytest.fail("a value was read"))
 
-    def write(t, org, project, name, given, note, secret=None):
-        calls.append(("write", org, project, name, secret))
-        if name == "refused":
+    def write(t, org, project, written, given, note, secret=None):
+        ctx.calls.append(["write", org, project, written, secret])
+        if written == "refused":
             raise pubsec.bitwarden.WriteFailed(pubsec.bitwarden.scrub(f"403 for {given} with {t}", (t, given)))
     monkeypatch.setattr(pubsec.bitwarden, "write", write)
-    writer = BitwardenWriter(token, "example")
-    writer.write("example-key", value, "a note")
-    assert calls == [("names", "org-id", "project-id"), ("write", "org-id", "project-id", "example-key", "secret-id")]
-    with pytest.raises(pubsec.bitwarden.WriteFailed) as refused:
-        writer.write("refused", value, "a note")
-    assert CANARY not in str(refused.value) and "[hidden]" in str(refused.value)
-    assert CANARY not in repr(writer.__dict__.get("project"))
+
+
+@when(parsers.parse('the writer writes "{name}"'))
+def writer_writes(ctx, name):
+    """BitwardenWriter looks the name up among identifiers, reading no value; what it was
+    asked, and the project it keeps, are the result."""
+    from pubsec.walk import BitwardenWriter  # noqa: PLC0415
+    writer = BitwardenWriter(f"{CANARY}-write-token", "example")
+
+    def written():
+        writer.write(name, f"{CANARY}-value", "a note")
+        return {"calls": ctx.calls, "project": repr(writer.__dict__.get("project"))}
+    ctx.attempt(written)

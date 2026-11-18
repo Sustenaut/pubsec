@@ -39,7 +39,7 @@ Feature: pubdeploy check walks pubsec's needs with the rest, and changes nothing
     And it prints "Secret example-page-secrets key cookie-secret (need k8s.secret:example-page-secrets), oauth2-proxy's cookie secret: 20 bytes, 15 after URL-safe base64 decoding; oauth2-proxy needs 16, 24 or 32 bytes"
 
   Scenario: A Secret without a key the manifests read is drift
-    Given the Secret "example-files" has no key "token"
+    Given the key "token" is missing from the Secret "example-files"
     When I run pubdeploy "check"
     Then "k8s.secret:example-files" is drift
     And it prints "Secret example-files has no key token, which need k8s.secret:example-files reads"

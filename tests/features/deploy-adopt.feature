@@ -44,7 +44,7 @@ Feature: bitwarden.adopt keeps a value the cluster already holds by copying it i
     Examples:
       | cluster                                                  | said                                         |
       | the Secret "example-page-secrets" is not in the cluster  | holds no value to keep                       |
-      | the Secret "example-page-secrets" has no key "cookie-secret" | holds no value to keep                   |
+      | the key "cookie-secret" is missing from the Secret "example-page-secrets" | holds no value to keep                   |
       | the Secret "example-page-secrets" holds "cookie-secret" as 20 bytes | is not one to keep                |
 
   Scenario: A format the value must match is a regular expression

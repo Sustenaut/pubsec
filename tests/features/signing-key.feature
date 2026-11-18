@@ -5,9 +5,13 @@ Feature: pubsec signing-key backup copies the signing keys repositories declare 
   yet in its project, from memory, with the token typed at a hidden prompt. It
   never overwrites a secret, and never prints a key.
 
+  Background:
+    Given a scratch directory
+    And the program under test is "pubsec"
+
   Scenario: A dry run says what it would back up, and asks for nothing
     Given a repository that declares its corpus key as "pub-signing-key-demo" in the project "the-project"
-    When I run pubsec "signing-key" "backup" "--dry-run"
+    When I run "pubsec signing-key backup --dry-run"
     Then it succeeds
     And it prints "Keys that would be backed up to the-project, unless already there:"
     And it prints "  pub-signing-key-demo  "
@@ -41,7 +45,7 @@ Feature: pubsec signing-key backup copies the signing keys repositories declare 
 
   Scenario: A corpus key pubrules.json does not declare is pointed out
     Given a repository with a corpus key it does not declare
-    When I run pubsec "signing-key" "backup" "--dry-run"
+    When I run "pubsec signing-key backup --dry-run"
     Then it succeeds
     And it prints "a signing key pubrules.json does not declare"
 
@@ -70,7 +74,7 @@ Feature: pubsec signing-key backup copies the signing keys repositories declare 
 
   Scenario: A declared key that is not on this machine is reported, not failed
     Given a repository that declares a key at "~/.config/demo/missing.key" as "pub-signing-key-gone"
-    When I run pubsec "signing-key" "backup" "--dry-run"
+    When I run "pubsec signing-key backup --dry-run"
     Then it succeeds
     And it prints "pub-signing-key-gone: not on this machine"
 
@@ -119,7 +123,7 @@ Feature: pubsec signing-key backup copies the signing keys repositories declare 
 
   Scenario: The output names each project with its id, then lists its keys beneath it
     Given a repository that declares its corpus key as "pub-signing-key-demo" in the project with id "11111111-2222-3333-4444-555555555555" named "the-project"
-    When I run pubsec "signing-key" "backup" "--dry-run"
+    When I run "pubsec signing-key backup --dry-run"
     Then it succeeds
     And it prints "Projects: the-project (11111111-2222-3333-4444-555555555555)"
     And it prints "Keys that would be backed up to the-project (11111111-2222-3333-4444-555555555555), unless already there:"
