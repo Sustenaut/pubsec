@@ -131,10 +131,6 @@ class PubsecWorld(World):
         monkeypatch.setattr(bitwarden, "generate", generate)
         monkeypatch.setattr("pubsec.needs.gcp.gcloud", self.run_gcloud)
 
-    def patch_pubsec(self, monkeypatch) -> None:
-        """pubsec patches itself, in `patch`; pubdeploy's own reach into
-        pubsec is not used, so a later pubdeploy can drop it."""
-
     def gcloud_answer(self, args: list[str]) -> Ran:
         if self.gcloud["missing"]:
             return super().gcloud_answer(args)
