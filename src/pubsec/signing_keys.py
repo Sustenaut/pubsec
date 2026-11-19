@@ -155,9 +155,11 @@ def _digest(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
 
 
-def _read_declarations(under: Path | None) -> tuple[dict[tuple[str, str], list[Declared]], bool]:
+def _read_declarations(under: Path | None, point_out: bool = False
+                       ) -> tuple[dict[tuple[str, str], list[Declared]], bool]:
     """Every repository's declared keys, by (project, name); and whether a
-    pubrules.json was unusable."""
+    pubrules.json was unusable. With `point_out`, also says which corpus keys
+    on this machine no pubrules.json declares."""
     failed = False
     keys: dict[tuple[str, str], list[Declared]] = {}
     for repo in repositories(under):
@@ -172,9 +174,49 @@ def _read_declarations(under: Path | None) -> tuple[dict[tuple[str, str], list[D
                 print(f"{repo / CONFIG}: {phrase}")
             failed = True
             continue
+        if point_out:
+            for path in undeclared(repo, config):
+                print(f"{path}: a signing key {CONFIG} does not declare; add it to {FIELD} to back it up")
         for key in declared(repo, config):
             keys.setdefault((key.project, key.name), []).append(key)
     return keys, failed
+
+
+def _grouped(first: dict[tuple[str, str], Declared]) -> tuple[dict[str, list[str]], dict[str, str], list[str]]:
+    """The planned names by project, each project's title, and the projects
+    in title order."""
+    groups: dict[str, list[str]] = {}
+    for project, name in first:
+        groups.setdefault(project, []).append(name)
+    titles = {project: next((first[(project, n)].shown for n in names if first[(project, n)].label), project)
+              for project, names in groups.items()}
+    return groups, titles, sorted(groups, key=titles.get)
+
+
+def _projects(token: str) -> list[dict] | None:
+    """The projects `token` sees, and Bitwarden's SDK ready; None, said, when not."""
+    from .bitwarden import ensure  # noqa: PLC0415
+    from .github_app import BwsFailed, _listed, bws  # noqa: PLC0415
+    try:
+        projects = _listed(bws(token, "project", "list", "--output", "json", "--color", "no"))
+    except BwsFailed as error:
+        print(f"bws: {error}")
+        return None
+    if why := ensure():
+        print(why)
+        return None
+    return projects
+
+
+def _one(projects: list[dict], project: str, names: list[str], what: str) -> dict | None:
+    """The one project `project` names; None, said, when the token sees not one."""
+    found = matching(projects, project)
+    if len(found) == 1:
+        return found[0]
+    sees = ", ".join(sorted(str(p.get("name")) for p in projects)) or "none"
+    print(f"this token sees {len(found)} projects that are {project}, not one (it sees: {sees}); "
+          f"not {what}: {', '.join(names)}")
+    return None
 
 
 def _write_new(path: Path, value: str) -> None:
@@ -186,124 +228,92 @@ def _write_new(path: Path, value: str) -> None:
         out.write(value)
 
 
+def _restore_one(token: str, held: list[str], name: str, places: list[Declared]) -> bool:
+    """Write `name`'s one value to each of `places`: whether it was."""
+    from .bitwarden import WriteFailed, values as stored_values  # noqa: PLC0415
+    if len(held) != 1:
+        print(f"  {name}: the project holds it {len(held)} times, not once; not restored")
+        return False
+    try:
+        value = stored_values(token, held).get(held[0])
+    except WriteFailed as error:
+        print(f"  {name}: Bitwarden: {error}")
+        return False
+    if not value:
+        print(f"  {name}: Bitwarden gave no value; not restored")
+        return False
+    done = True
+    for key in places:
+        try:
+            _write_new(key.path, value)
+        except FileExistsError:
+            print(f"  {name}: {key.path} appeared meanwhile; left alone")
+            done = False
+            continue
+        print(f"  {name}: restored to {key.path}")
+    return done
+
+
 def restore(under: Path | None, wanted: list[str], dry_run: bool) -> int:
-    from .github_app import BwsFailed, _listed, ask_hidden, bws  # noqa: PLC0415
+    from .bitwarden import WriteFailed, names as stored_names  # noqa: PLC0415
+    from .github_app import ask_hidden  # noqa: PLC0415
 
     keys, failed = _read_declarations(under)
-    unknown = sorted(set(wanted) - {name for _, name in keys})
-    for name in unknown:
+    for name in sorted(set(wanted) - {name for _, name in keys}):
         print(f"{name}: no {CONFIG} here declares it")
         failed = True
     plan: dict[tuple[str, str], list[Declared]] = {}
     for (project, name), places in sorted(keys.items()):
         if wanted and name not in wanted:
             continue
-        missing = [key for key in places if not key.path.exists()]
         for key in places:
             if key.path.exists():
                 print(f"{name}: already at {key.path}; left alone")
-        if missing:
+        if missing := [key for key in places if not key.path.exists()]:
             plan[(project, name)] = missing
     if not plan:
         if not failed:
             print("nothing to restore")
         return 1 if failed else 0
-
-    groups: dict[str, list[str]] = {}
-    for project, name in plan:
-        groups.setdefault(project, []).append(name)
-    titles = {project: next((plan[(project, n)][0].shown for n in names if plan[(project, n)][0].label),
-                            project) for project, names in groups.items()}
+    groups, titles, order = _grouped({k: v[0] for k, v in plan.items()})
     if dry_run:
-        for project in sorted(groups, key=titles.get):
+        for project in order:
             print(f"Keys that would be restored from {titles[project]}:")
             for name in groups[project]:
                 for key in plan[(project, name)]:
                     print(f"  {name}  {key.path}")
         return 1 if failed else 0
 
-    token = ask_hidden(f"Bitwarden access token that may read "
-                       f"{', '.join(titles[p] for p in sorted(groups, key=titles.get))}: ")
+    token = ask_hidden(f"Bitwarden access token that may read {', '.join(titles[p] for p in order)}: ")
     if not token:
         print("no token given; nothing written")
         return 1
-    from .bitwarden import WriteFailed, ensure  # noqa: PLC0415
-    from .bitwarden import names as stored_names, values as stored_values  # noqa: PLC0415
-    try:
-        projects = _listed(bws(token, "project", "list", "--output", "json", "--color", "no"))
-    except BwsFailed as error:
-        print(f"bws: {error}")
+    if (projects := _projects(token)) is None:
         return 1
-    if why := ensure():
-        print(why)
-        return 1
-    for project in sorted(groups, key=titles.get):
-        found = matching(projects, project)
+    for project in order:
         names = groups[project]
-        if len(found) != 1:
-            sees = ", ".join(sorted(str(p.get("name")) for p in projects)) or "none"
-            print(f"this token sees {len(found)} projects that are {project}, not one (it sees: {sees}); "
-                  f"not restored: {', '.join(names)}")
+        if not (found := _one(projects, project, names, "restored")):
             failed = True
             continue
         try:
-            ids = {name: found_ids for name, found_ids in
-                   stored_names(token, found[0]["organizationId"], found[0]["id"]).items() if name in names}
+            ids = stored_names(token, found["organizationId"], found["id"])
         except WriteFailed as error:
             print(f"Bitwarden: {error}")
             failed = True
             continue
         print(f"Keys being restored from {titles[project]}:")
         for name in names:
-            held = ids.get(name, [])
-            if len(held) != 1:
-                print(f"  {name}: the project holds it {len(held)} times, not once; not restored")
+            if not _restore_one(token, ids.get(name, []), name, plan[(project, name)]):
                 failed = True
-                continue
-            try:
-                value = stored_values(token, held).get(held[0])
-            except WriteFailed as error:
-                print(f"  {name}: Bitwarden: {error}")
-                failed = True
-                continue
-            if not value:
-                print(f"  {name}: Bitwarden gave no value; not restored")
-                failed = True
-                continue
-            for key in plan[(project, name)]:
-                try:
-                    _write_new(key.path, value)
-                except FileExistsError:
-                    print(f"  {name}: {key.path} appeared meanwhile; left alone")
-                    failed = True
-                    continue
-                print(f"  {name}: restored to {key.path}")
-            del value
     return 1 if failed else 0
 
 
 def run(under: Path | None, dry_run: bool) -> int:
-    from .github_app import BwsFailed, _listed, ask_hidden, bws  # noqa: PLC0415
+    from .bitwarden import WriteFailed, write  # noqa: PLC0415
+    from .bitwarden import names as stored_names, values as stored_values  # noqa: PLC0415
+    from .github_app import ask_hidden  # noqa: PLC0415
 
-    failed = False
-    keys: dict[tuple[str, str], list[Declared]] = {}
-    for repo in repositories(under):
-        try:
-            config = json.loads((repo / CONFIG).read_text(encoding="utf-8"))
-        except ValueError:
-            print(f"{repo / CONFIG}: not JSON; skipped")
-            failed = True
-            continue
-        if wrong := problems(config.get(FIELD)):
-            for phrase in wrong:
-                print(f"{repo / CONFIG}: {phrase}")
-            failed = True
-            continue
-        for path in undeclared(repo, config):
-            print(f"{path}: a signing key {CONFIG} does not declare; add it to {FIELD} to back it up")
-        for key in declared(repo, config):
-            keys.setdefault((key.project, key.name), []).append(key)
-
+    keys, failed = _read_declarations(under, point_out=True)
     # The same name may be declared by several checkouts of one repository:
     # one value is backed up, and two values under one name are a mistake.
     plan: dict[tuple[str, str], tuple[Declared, str]] = {}
@@ -318,56 +328,36 @@ def run(under: Path | None, dry_run: bool) -> int:
             continue
         plan[(project, name)] = here[0]
 
-    groups: dict[str, list[str]] = {}
-    for project, name in plan:
-        groups.setdefault(project, []).append(name)
-    titles = {project: next((plan[(project, n)][0].shown for n in names if plan[(project, n)][0].label),
-                            project) for project, names in groups.items()}
+    groups, titles, order = _grouped({k: v[0] for k, v in plan.items()})
     if plan:
-        print(f"Projects: {', '.join(titles[p] for p in sorted(groups, key=titles.get))}")
+        print(f"Projects: {', '.join(titles[p] for p in order)}")
     if dry_run or not plan:
-        for project in sorted(groups, key=titles.get):
+        for project in order:
             print(f"Keys that would be backed up to {titles[project]}, unless already there:")
             for name in groups[project]:
                 print(f"  {name}  {plan[(project, name)][0].path}")
         return 1 if failed else 0
 
-    token = ask_hidden(f"Bitwarden access token that may read and write "
-                       f"{', '.join(titles[p] for p in sorted(groups, key=titles.get))}: ")
+    token = ask_hidden(f"Bitwarden access token that may read and write {', '.join(titles[p] for p in order)}: ")
     if not token:
         print("no token given; nothing written")
         return 1
-    from .bitwarden import WriteFailed, ensure, write  # noqa: PLC0415
-    from .bitwarden import names as stored_names, values as stored_values  # noqa: PLC0415
-    try:
-        projects = _listed(bws(token, "project", "list", "--output", "json", "--color", "no"))
-    except BwsFailed as error:
-        print(f"bws: {error}")
+    if (projects := _projects(token)) is None:
         return 1
-    sdk_ready = False
-    for project in sorted(groups, key=titles.get):
-        found = matching(projects, project)
+    for project in order:
         names = groups[project]
-        if len(found) != 1:
-            sees = ", ".join(sorted(str(p.get("name")) for p in projects)) or "none"
-            print(f"this token sees {len(found)} projects that are {project}, not one (it sees: {sees}); "
-                  f"not backed up: {', '.join(names)}")
+        if not (found := _one(projects, project, names, "backed up")):
             failed = True
             continue
         labels = {plan[(project, n)][0].label for n in names} - {None}
-        for label in sorted(labels - {found[0].get("name")}):
-            print(f"warning: the project {project} is named {found[0].get('name')} in Bitwarden, "
+        for label in sorted(labels - {found.get("name")}):
+            print(f"warning: the project {project} is named {found.get('name')} in Bitwarden, "
                   f"not {label} as declared")
-        if not sdk_ready:
-            if why := ensure():
-                print(why)
-                return 1
-            sdk_ready = True
         # The names first, from identifiers alone; then the values of the
         # secrets named as these keys are, to compare, and of no others.
         try:
             ids = {name: found_ids for name, found_ids in
-                   stored_names(token, found[0]["organizationId"], found[0]["id"]).items() if name in names}
+                   stored_names(token, found["organizationId"], found["id"]).items() if name in names}
             held = stored_values(token, [i for found_ids in ids.values() for i in found_ids])
         except WriteFailed as error:
             print(f"Bitwarden: {error}")
@@ -386,7 +376,7 @@ def run(under: Path | None, dry_run: bool) -> int:
                     failed = True
                 continue
             try:
-                write(token, found[0]["organizationId"], found[0]["id"], name, value,
+                write(token, found["organizationId"], found["id"], name, value,
                       f"signing key, a copy of {key.path} (declared in {key.repo / CONFIG})")
             except WriteFailed as error:
                 print(f"  {name}: Bitwarden refused the write: {error}")
