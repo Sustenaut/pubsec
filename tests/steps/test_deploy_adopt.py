@@ -1,12 +1,13 @@
-"""Steps for bitwarden.adopt in pubdeploy's walk, against the fakes deploy_world.py
-keeps: the shared steps are deploy_steps.py's."""
+"""Steps for bitwarden.adopt in pubdeploy's walk, against the fakes pubdeploy.testing
+keeps: the shared steps are pubdeploy.testing's."""
 
 from __future__ import annotations
 
 from pytest_bdd import given, parsers, scenarios, then
 
-from deploy_steps import *  # noqa: F403 - the shared steps, and the fixtures pytest-bdd keeps them as
-from deploy_steps import entry, namespace
+import pytest
+pytestmark = pytest.mark.usefixtures("world")  # every scenario in pubdeploy.testing's world
+from pubdeploy.testing.steps import entry, namespace
 
 scenarios("deploy-adopt.feature")
 
