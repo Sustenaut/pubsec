@@ -1,4 +1,0 @@
-{
-  "category": "internal",
-  "change": "pubdeploy 0.6.0 for the tests, which no longer has patch_pubsec; PubsecWorld's no-op override of it goes"
-}
