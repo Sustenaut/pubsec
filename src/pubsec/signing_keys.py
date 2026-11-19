@@ -27,12 +27,24 @@ already there with the same value is left alone; one with another value is
 never overwritten, and fails the run. --dry-run says what it would write and
 asks for nothing. No key or token is printed, put on a command line or
 written anywhere else.
+
+    pubsec signing-key restore [NAME ...] [--under DIR] [--dry-run]
+
+is the other way: each declared key that is not on this machine (only those
+NAMEd, when any are) is read from its Bitwarden project, its value alone,
+and written to its declared path, readable by its owner alone (0600, in a
+directory only the owner may enter). A key already on this machine is never
+overwritten, and a name the project does not hold, or holds twice, fails
+the run. The token may be one that only reads. A restored corpus key is the
+key file alone: `pubdoc corpus init` (or `pub sign --restore-key`) then
+rebuilds the corpus's store around it.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -141,6 +153,133 @@ def matching(projects: list[dict], project: str) -> list[dict]:
 
 def _digest(text: str) -> str:
     return hashlib.sha256(text.encode()).hexdigest()
+
+
+def _read_declarations(under: Path | None) -> tuple[dict[tuple[str, str], list[Declared]], bool]:
+    """Every repository's declared keys, by (project, name); and whether a
+    pubrules.json was unusable."""
+    failed = False
+    keys: dict[tuple[str, str], list[Declared]] = {}
+    for repo in repositories(under):
+        try:
+            config = json.loads((repo / CONFIG).read_text(encoding="utf-8"))
+        except ValueError:
+            print(f"{repo / CONFIG}: not JSON; skipped")
+            failed = True
+            continue
+        if wrong := problems(config.get(FIELD)):
+            for phrase in wrong:
+                print(f"{repo / CONFIG}: {phrase}")
+            failed = True
+            continue
+        for key in declared(repo, config):
+            keys.setdefault((key.project, key.name), []).append(key)
+    return keys, failed
+
+
+def _write_new(path: Path, value: str) -> None:
+    """`value` into a new file at `path`, readable by its owner alone; never
+    over a file already there."""
+    path.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
+    descriptor = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    with os.fdopen(descriptor, "w", encoding="utf-8") as out:
+        out.write(value)
+
+
+def restore(under: Path | None, wanted: list[str], dry_run: bool) -> int:
+    from .github_app import BwsFailed, _listed, ask_hidden, bws  # noqa: PLC0415
+
+    keys, failed = _read_declarations(under)
+    unknown = sorted(set(wanted) - {name for _, name in keys})
+    for name in unknown:
+        print(f"{name}: no {CONFIG} here declares it")
+        failed = True
+    plan: dict[tuple[str, str], list[Declared]] = {}
+    for (project, name), places in sorted(keys.items()):
+        if wanted and name not in wanted:
+            continue
+        missing = [key for key in places if not key.path.exists()]
+        for key in places:
+            if key.path.exists():
+                print(f"{name}: already at {key.path}; left alone")
+        if missing:
+            plan[(project, name)] = missing
+    if not plan:
+        if not failed:
+            print("nothing to restore")
+        return 1 if failed else 0
+
+    groups: dict[str, list[str]] = {}
+    for project, name in plan:
+        groups.setdefault(project, []).append(name)
+    titles = {project: next((plan[(project, n)][0].shown for n in names if plan[(project, n)][0].label),
+                            project) for project, names in groups.items()}
+    if dry_run:
+        for project in sorted(groups, key=titles.get):
+            print(f"Keys that would be restored from {titles[project]}:")
+            for name in groups[project]:
+                for key in plan[(project, name)]:
+                    print(f"  {name}  {key.path}")
+        return 1 if failed else 0
+
+    token = ask_hidden(f"Bitwarden access token that may read "
+                       f"{', '.join(titles[p] for p in sorted(groups, key=titles.get))}: ")
+    if not token:
+        print("no token given; nothing written")
+        return 1
+    from .bitwarden import WriteFailed, ensure  # noqa: PLC0415
+    from .bitwarden import names as stored_names, values as stored_values  # noqa: PLC0415
+    try:
+        projects = _listed(bws(token, "project", "list", "--output", "json", "--color", "no"))
+    except BwsFailed as error:
+        print(f"bws: {error}")
+        return 1
+    if why := ensure():
+        print(why)
+        return 1
+    for project in sorted(groups, key=titles.get):
+        found = matching(projects, project)
+        names = groups[project]
+        if len(found) != 1:
+            sees = ", ".join(sorted(str(p.get("name")) for p in projects)) or "none"
+            print(f"this token sees {len(found)} projects that are {project}, not one (it sees: {sees}); "
+                  f"not restored: {', '.join(names)}")
+            failed = True
+            continue
+        try:
+            ids = {name: found_ids for name, found_ids in
+                   stored_names(token, found[0]["organizationId"], found[0]["id"]).items() if name in names}
+        except WriteFailed as error:
+            print(f"Bitwarden: {error}")
+            failed = True
+            continue
+        print(f"Keys being restored from {titles[project]}:")
+        for name in names:
+            held = ids.get(name, [])
+            if len(held) != 1:
+                print(f"  {name}: the project holds it {len(held)} times, not once; not restored")
+                failed = True
+                continue
+            try:
+                value = stored_values(token, held).get(held[0])
+            except WriteFailed as error:
+                print(f"  {name}: Bitwarden: {error}")
+                failed = True
+                continue
+            if not value:
+                print(f"  {name}: Bitwarden gave no value; not restored")
+                failed = True
+                continue
+            for key in plan[(project, name)]:
+                try:
+                    _write_new(key.path, value)
+                except FileExistsError:
+                    print(f"  {name}: {key.path} appeared meanwhile; left alone")
+                    failed = True
+                    continue
+                print(f"  {name}: restored to {key.path}")
+            del value
+    return 1 if failed else 0
 
 
 def run(under: Path | None, dry_run: bool) -> int:

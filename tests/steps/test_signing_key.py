@@ -20,6 +20,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 
 scenarios("signing-key.feature")
+scenarios("signing-key-restore.feature")
 
 PROJECT_ID = "11111111-2222-3333-4444-555555555555"
 ORGANIZATION_ID = "99999999-2222-3333-4444-555555555555"
@@ -208,3 +209,16 @@ def nothing_secret(result):
     printed = result.stdout + result.stderr
     assert CORPUS_KEY.strip() not in printed
     assert f"{TOKEN}\n" not in printed and f" {TOKEN} " not in printed
+
+
+@when(parsers.re(r'I restore the keys, giving the token "(?P<token>[^"]*)"'), target_fixture="result")
+def restore_keys(pubtest_ctx, binary, repo, env, token):
+    return without_terminal(pubtest_ctx, [binary("pubsec"), "signing-key", "restore"], [token], repo)
+
+
+@then(parsers.parse('"{path}" holds the corpus key, readable by its owner alone'))
+def restored(repo, path):
+    target = repo / path
+    assert target.read_text() == CORPUS_KEY
+    assert oct(target.stat().st_mode & 0o777) == oct(0o600), oct(target.stat().st_mode)
+    assert target.parent.stat().st_mode & 0o077 == 0, oct(target.parent.stat().st_mode)
