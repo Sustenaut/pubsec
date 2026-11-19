@@ -1,0 +1,4 @@
+{
+  "category": "internal",
+  "change": "The deploy scenarios run in pubdeploy.testing's world (pubdeploy 0.5.3), extended by a PubsecWorld; pubsec's copy of the harness and its sample service are gone"
+}

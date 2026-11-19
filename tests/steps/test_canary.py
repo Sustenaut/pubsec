@@ -18,11 +18,15 @@ import json
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from deploy_world import CANARY, run, world  # noqa: F401 - the fixture
+from pubdeploy.testing.world import CANARY, run
 from pubdeploy import load
 from pubdeploy.model import Need, Result
 from pubdeploy.registry import types
 from pubdeploy.walk import walk
+
+# The types pubsec offers.
+OURS = {"bitwarden.secret", "bitwarden.generated", "gcp.service-account-key", "github.secret",
+        "github.variable", "github.deploy-settings", "k8s.secret"}
 
 scenarios("canary.feature")
 
@@ -63,8 +67,8 @@ def in_state(world, state):
 
 
 @when(parsers.parse('pubdeploy runs "{argv}"'))
-def runs(world, capsys, argv):
-    run(world, capsys, *argv.split())
+def runs(world, ctx, argv):
+    run(world, ctx, *argv.split())
 
 
 @then("no value is printed, passed to a program or kept in the journal")
@@ -166,7 +170,6 @@ def made_stays(world):
 def types_loaded(ctx):
     """The seven reach the walk by their entry points, as installed: where each came from, and its package."""
     from pubdeploy.registry import load as registry  # noqa: PLC0415
-    from deploy_world import OURS  # noqa: PLC0415
 
     def loaded():
         found = registry()
