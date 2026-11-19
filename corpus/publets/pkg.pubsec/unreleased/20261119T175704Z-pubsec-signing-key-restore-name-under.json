@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "pubsec signing-key restore [NAME ...] [--under DIR] [--dry-run]: each signing key pubrules.json declares that this machine lacks is read from its Bitwarden project (its value alone, with a token that may only read) and written to its declared path, readable by its owner alone; a key already there is never overwritten, a name the project does not hold once fails, and no key or token is printed"
-}
