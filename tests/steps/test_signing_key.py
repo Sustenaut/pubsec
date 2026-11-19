@@ -20,6 +20,7 @@ from pytest_bdd import given, parsers, scenarios, then, when
 
 
 scenarios("signing-key.feature")
+scenarios("signing-key-restore.feature")
 
 PROJECT_ID = "11111111-2222-3333-4444-555555555555"
 ORGANIZATION_ID = "99999999-2222-3333-4444-555555555555"
@@ -33,6 +34,9 @@ args = sys.argv[1:]
 with open(os.environ["FAKE_LOG"], "a") as log:
     log.write(json.dumps({{"tool": "bws", "args": args}}) + "\\n")
 if args[:2] == ["project", "list"]:
+    if os.environ.get("BWS_REFUSE"):
+        sys.stderr.write("the token was refused\\n")
+        sys.exit(1)
     names = os.environ.get("BWS_PROJECTS", "the-project").split(",")
     print(json.dumps([{{"id": "{PROJECT_ID}" if i == 0 else f"id-{{i}}", "name": name, "organizationId": "{ORGANIZATION_ID}"}}
                       for i, name in enumerate(names)]))
@@ -208,3 +212,44 @@ def nothing_secret(result):
     printed = result.stdout + result.stderr
     assert CORPUS_KEY.strip() not in printed
     assert f"{TOKEN}\n" not in printed and f" {TOKEN} " not in printed
+
+
+@when(parsers.re(r'I restore the keys, giving the token "(?P<token>[^"]*)"'), target_fixture="result")
+def restore_keys(pubtest_ctx, binary, repo, env, token):
+    return without_terminal(pubtest_ctx, [binary("pubsec"), "signing-key", "restore"], [token], repo)
+
+
+@then(parsers.parse('"{path}" holds the corpus key, readable by its owner alone'))
+def restored(repo, path):
+    target = repo / path
+    assert target.read_text() == CORPUS_KEY
+    assert oct(target.stat().st_mode & 0o777) == oct(0o600), oct(target.stat().st_mode)
+    assert target.parent.stat().st_mode & 0o077 == 0, oct(target.parent.stat().st_mode)
+
+
+@given(parsers.parse('the project holds "{name}" twice'))
+def holds_twice(env, name):
+    env["BWS_EXISTING"] = json.dumps([{"id": "s1", "key": name, "value": CORPUS_KEY},
+                                      {"id": "s2", "key": name, "value": CORPUS_KEY}])
+
+
+@given("the second checkout's corpus key is gone")
+def second_gone(fakes):
+    (fakes / "checkouts" / "two" / "corpus" / ".publet" / "signing.key").unlink()
+
+
+@when(parsers.parse('I restore every repository under that directory, giving the token "{token}"'),
+      target_fixture="result")
+def restore_under(pubtest_ctx, binary, fakes, env, token):
+    return without_terminal(pubtest_ctx, [binary("pubsec"), "signing-key", "restore", "--under",
+                                          str(fakes / "checkouts")], [token], fakes)
+
+
+@given("bws refuses the token")
+def bws_refuses(env):
+    env["BWS_REFUSE"] = "1"
+
+
+@given(parsers.parse('the project holds "{name}" with no value'))
+def holds_empty(env, name):
+    env["BWS_EXISTING"] = json.dumps([{"id": "s1", "key": name, "value": ""}])

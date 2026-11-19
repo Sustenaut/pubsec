@@ -5,6 +5,7 @@
     pubsec github-app create [--replace] [--dry-run] MANIFEST
     pubsec service-account-key create --account EMAIL --secret NAME [--bitwarden-project NAME] [--replace] [--dry-run]
     pubsec signing-key backup [--under DIR] [--dry-run]
+    pubsec signing-key restore [NAME ...] [--under DIR] [--dry-run]
     pubsec types
     pubsec --version
 
@@ -121,6 +122,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--under", type=Path, metavar="DIR",
                    help="every repository directly under DIR, not this one")
     p.add_argument("--dry-run", action="store_true", help="say what would be written, and ask for nothing")
+    p = signing_key.add_parser("restore", help="write each declared key this machine lacks from its Bitwarden "
+                                               "project, never over one already here")
+    p.add_argument("names", nargs="*", metavar="NAME", help="only these keys, by their Bitwarden names")
+    p.add_argument("--under", type=Path, metavar="DIR",
+                   help="every repository directly under DIR, not this one")
+    p.add_argument("--dry-run", action="store_true", help="say what would be restored, and ask for nothing")
     commands.add_parser("types", help="the deploy need types pubsec offers pubdeploy's walk")
     args = parser.parse_args(given)
     root = Path.cwd()
@@ -135,8 +142,12 @@ def main(argv: list[str] | None = None) -> int:
         return service_account_key(root, args.account, args.secret, args.bitwarden_project, args.replace,
                                    args.dry_run)
     if args.command == "signing-key":
+        under = args.under.expanduser() if args.under else None
+        if args.signing_key_command == "restore":
+            from .signing_keys import restore  # noqa: PLC0415
+            return restore(under, args.names, args.dry_run)
         from .signing_keys import run as signing_key_backup  # noqa: PLC0415
-        return signing_key_backup(args.under.expanduser() if args.under else None, args.dry_run)
+        return signing_key_backup(under, args.dry_run)
     return types()
 
 
