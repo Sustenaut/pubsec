@@ -21,6 +21,7 @@ from deploy_world import CANARY, NOW, World, key_value, run, world  # noqa: F401
 from pubdeploy import load
 from pubdeploy.model import Result, Stop
 from pubdeploy.schema import journal_schema, problems, validate
+from pubtest.core import Result as Outcome
 
 
 def value_of(text: str):
@@ -76,11 +77,6 @@ def dropped(world, need_id):
 @given(parsers.parse('the need "{need_id}" is after "{other}"'))
 def is_after(world, need_id, other):
     entry(world, need_id).setdefault("after", []).append(other)
-
-
-@given(parsers.parse('the file "{path}" is gone'))
-def gone(world, path):
-    (world.root / path).unlink()
 
 
 @given("the deploy block lists its needs the other way round")
@@ -194,10 +190,11 @@ def offers_bad(offered, dist, part, value):
 
 
 @when(parsers.re(r'I run pubdeploy (?P<args>(?:"[^"]*" ?)+)'), target_fixture="result")
-def run_pubrules(world, capsys, args):
+def run_pubrules(pubtest_ctx, world, capsys, args):
     argv = args.strip().strip('"').split('" "')
+    pubtest_ctx.acting()
     code = run(world, capsys, *argv)
-    return SimpleNamespace(code=code, stdout=world.stdout, stderr=world.stderr)
+    return pubtest_ctx.ran(Outcome(code=code, stdout=world.stdout, stderr=world.stderr, argv=["pubdeploy", *argv]))
 
 
 @when("I check the deploy block")
@@ -401,7 +398,7 @@ def holds_20(world, secret, key):
     namespace(world)["secrets"][secret][key] = (CANARY + "k" * 9).encode()
 
 
-@given(parsers.parse('the Secret "{secret}" has no key "{key}"'))
+@given(parsers.parse('the key "{key}" is missing from the Secret "{secret}"'))
 def lacks_key(world, secret, key):
     data = namespace(world)["secrets"][secret]
     data.pop(key)
@@ -490,11 +487,6 @@ def no_render(world):
 @given(parsers.parse('the file "{path}" holds only a comment'))
 def only_comment(world, path):
     (world.root / path).write_text("# nothing to apply\n")
-
-
-@given(parsers.parse('the file "{path}" holds "{text}"'))
-def file_holds(world, path, text):
-    (world.root / path).write_text(text + "\n")
 
 
 @given(parsers.parse('the need "{need_id}" fills the key "{key}"'))
@@ -767,11 +759,6 @@ def gh_set(world, kind, name):
 @then(parsers.parse('a Job was made from the CronJob "{name}"'))
 def job_made(world, name):
     assert any(j.startswith(f"{name}-pubrules-") for j in world.cluster.get("jobs", [])), world.cluster.get("jobs")
-
-
-@then(parsers.parse('stderr does not mention "{text}"'))
-def stderr_lacks(world, text):
-    assert text not in world.stderr, world.stderr
 
 
 # --- the phase 2 types ------------------------------------------------------------------------------
@@ -1079,11 +1066,6 @@ def fulfilled_only(world, need_id):
 def job_completed(world, job, hours):
     namespace(world).setdefault("job", []).append({"metadata": {"name": job}, "status": {
         "succeeded": 1, "completionTime": (NOW - timedelta(hours=hours)).strftime("%Y-%m-%dT%H:%M:%SZ")}})
-
-
-@then(parsers.parse('it does not print "{text}"'))
-def not_printed(world, text):
-    assert text not in world.stdout, world.stdout
 
 
 @given("gcloud may not make keys")

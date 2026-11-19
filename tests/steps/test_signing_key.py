@@ -11,15 +11,13 @@ from __future__ import annotations
 
 import json
 import os
-import subprocess
 import sys
 
 import pytest
-from conftest import pubsec
+from conftest import without_terminal
 from fake_reads import METHODS, READS, REFUSED_LIST
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from pubtest.core import Completed
 
 scenarios("signing-key.feature")
 
@@ -113,11 +111,6 @@ def declares_by_id(repo, fakes, name, uuid, label):
                      "bitwarden": {"project": {"id": uuid, "name": label}, "name": name}}])
 
 
-@then(parsers.parse('it does not print "{text}"'))
-def does_not_print(result, text):
-    assert text not in result.stdout, result.stdout
-
-
 @given(parsers.parse('a repository that declares "{path}" as "{name}" in the project "{project}"'))
 def declares_home_key(repo, fakes, path, name, project):
     _declare(repo, [_entry(path, name, project)], key=None)
@@ -170,22 +163,16 @@ def block(repo, block):
     (repo / "pubrules.json").write_text(json.dumps(config))
 
 
-def _backup(cwd, env, token, *flags):
-    argv = [pubsec(), "signing-key", "backup", *flags]
-    done = subprocess.run(argv, input=f"{token}\n".encode(), cwd=cwd, env={**os.environ, **env},
-                          capture_output=True, timeout=60, start_new_session=True, check=False)
-    return Completed(argv, done.returncode, done.stdout, done.stderr)
-
-
 @when(parsers.re(r'I back the keys up, giving the token "(?P<token>[^"]*)"'), target_fixture="result")
-def back_up(repo, env, token):
-    return _backup(repo, env, token)
+def back_up(pubtest_ctx, binary, repo, env, token):
+    return without_terminal(pubtest_ctx, [binary("pubsec"), "signing-key", "backup"], [token], repo)
 
 
 @when(parsers.parse('I back up every repository under that directory, giving the token "{token}"'),
       target_fixture="result")
-def back_up_under(fakes, env, token):
-    return _backup(fakes, env, token, "--under", str(fakes / "checkouts"))
+def back_up_under(pubtest_ctx, binary, fakes, env, token):
+    return without_terminal(pubtest_ctx, [binary("pubsec"), "signing-key", "backup", "--under",
+                                          str(fakes / "checkouts")], [token], fakes)
 
 
 def _calls(fakes, tool):

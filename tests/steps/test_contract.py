@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import re
 from pathlib import Path
-from pytest_bdd import scenarios, then
+from pytest_bdd import scenarios, when
 
 scenarios("contract.feature")
 
@@ -18,23 +18,26 @@ CONTRACT = {"root", "config", "block", "namespace", "unit", "channel", "kubectl"
             "values", "types", "needs", "results", "sleep", "dispatched"}
 
 
-@then("only the contract is used")
-def only_the_contract_is_used():
-    used = {m for path in SOURCE.rglob("*.py") for m in re.findall(r"\bctx\.([a-z_]+)", path.read_text())}
-    assert used <= CONTRACT, used - CONTRACT
+@when("the names pubsec's code reads from a Context, and not in the contract, are gathered")
+def outside_contract(ctx):
+    def gathered() -> list[str]:
+        used = {m for path in SOURCE.rglob("*.py") for m in re.findall(r"\bctx\.([a-z_]+)", path.read_text())}
+        assert used, "pubsec's code reads nothing from a Context"
+        return sorted(used - CONTRACT)
+    ctx.attempt(gathered)
 
 
-@then("nothing of pubrules is imported")
-def nothing_of_pubrules_is_imported():
-    for path in SOURCE.rglob("*.py"):
-        for line in path.read_text().splitlines():
-            assert not re.match(r"\s*(from|import)\s+pub(kit|deploy)\b", line), f"{path.name}: {line}"
+@when("pubsec's imports of pubkit or pubdeploy are gathered")
+def imports(ctx):
+    ctx.attempt(lambda: [f"{path.name}: {line}" for path in sorted(SOURCE.rglob("*.py"))
+                         for line in path.read_text().splitlines()
+                         if re.match(r"\s*(from|import)\s+pub(kit|deploy)\b", line)])
 
 
-@then("the contract is on pubdeploys context")
-def the_contract_is_on_pubdeploys_context():
+@when("the names of the contract that pubdeploy's Context lacks are gathered")
+def lacking(ctx):
     """The pubdeploy the suite runs has every name of the contract on its Context."""
     from dataclasses import fields  # noqa: PLC0415
 
     from pubdeploy.model import Context  # noqa: PLC0415
-    assert CONTRACT <= {f.name for f in fields(Context)}
+    ctx.attempt(lambda: sorted(CONTRACT - {f.name for f in fields(Context)}))

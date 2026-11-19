@@ -11,15 +11,13 @@ from __future__ import annotations
 import base64
 import json
 import os
-import subprocess
 import sys
 
 import pytest
-from conftest import pubsec
+from conftest import without_terminal
 from fake_reads import METHODS, READS, REFUSED_LIST
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from pubtest.core import Completed
 
 scenarios("service-account-key.feature")
 
@@ -147,39 +145,36 @@ def uv_refuses(env):
     env["UV_REFUSES"] = "1"
 
 
-def _make(repo, env, flags, lines, address=ACCOUNT):
-    argv = [pubsec(), "service-account-key", "create", f"--account={address}", "--secret=the-key", *flags]
-    done = subprocess.run(argv, input="".join(f"{line}\n" for line in lines).encode(), cwd=repo,
-                          env={**os.environ, **env}, capture_output=True, timeout=60,
-                          start_new_session=True, check=False)
-    return Completed(argv, done.returncode, done.stdout, done.stderr)
+def _make(pubtest_ctx, binary, repo, flags, lines, address=ACCOUNT):
+    return without_terminal(pubtest_ctx, [binary("pubsec"), "service-account-key", "create", f"--account={address}",
+                                          "--secret=the-key", *flags], lines, repo)
 
 
 @when(parsers.parse('I make the key, giving the token "{token}" and answering "{answer}"'), target_fixture="result")
-def make(repo, env, token, answer):
-    return _make(repo, env, [], [token, answer])
+def make(pubtest_ctx, binary, repo, env, token, answer):
+    return _make(pubtest_ctx, binary, repo, [], [token, answer])
 
 
 @when("I make the key, giving no token", target_fixture="result")
-def make_no_token(repo, env):
-    return _make(repo, env, [], ["", "yes"])
+def make_no_token(pubtest_ctx, binary, repo, env):
+    return _make(pubtest_ctx, binary, repo, [], ["", "yes"])
 
 
 @when(parsers.parse('I make the key with "{flag}", giving the token "{token}" and answering "{answer}"'),
       target_fixture="result")
-def make_flag(repo, env, flag, token, answer):
-    return _make(repo, env, [flag], [token, answer])
+def make_flag(pubtest_ctx, binary, repo, env, flag, token, answer):
+    return _make(pubtest_ctx, binary, repo, [flag], [token, answer])
 
 
 @when(parsers.parse('I make the key with "{flag}", giving nothing'), target_fixture="result")
-def make_nothing(repo, env, flag):
-    return _make(repo, env, [flag], [])
+def make_nothing(pubtest_ctx, binary, repo, env, flag):
+    return _make(pubtest_ctx, binary, repo, [flag], [])
 
 
 @when(parsers.parse('I make the key for "{address}", giving the token "{token}" and answering "{answer}"'),
       target_fixture="result")
-def make_for(repo, env, address, token, answer):
-    return _make(repo, env, [], [token, answer], address)
+def make_for(pubtest_ctx, binary, repo, env, address, token, answer):
+    return _make(pubtest_ctx, binary, repo, [], [token, answer], address)
 
 
 def calls(tmp_path, tool):

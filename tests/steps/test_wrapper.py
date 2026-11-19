@@ -5,9 +5,10 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
 
 import pytest
-from conftest import pubsec
+from pubtest.steps.programs import run_command
 from pytest_bdd import given, parsers, scenarios, then, when
 
 scenarios("wrapper.feature")
@@ -93,35 +94,39 @@ def holds_three(fake, k1, v1, k2, v2, k3, v3, project):
     _holds(fake, project, [(k1, v1), (k2, v2), (k3, v3)])
 
 
-def _wrapper(repo, run, fake, env, runner, *command):
-    env = {"PATH": f"{fake / 'bin'}:{os.environ['PATH']}", "FAKE_BWS": str(fake),
-           "SHOW_ENV": str(fake / "seen.env"), **env}
+def _wrapper(pubtest_ctx, fake, env, runner, *command):
+    env.update({"PATH": f"{fake / 'bin'}:{os.environ['PATH']}", "FAKE_BWS": str(fake),
+                "SHOW_ENV": str(fake / "seen.env")})
     program, *args = runner.split(" ")
     assert program == "pubsec", runner
-    return run(pubsec(), *args, "--", *command, cwd=repo, env=env)
+    return run_command(pubtest_ctx, shlex.join([program, *args, "--", *map(str, command)]), None)
 
 
-@when(parsers.parse('I run "{runner}" with the token "{token}"'), target_fixture="result")
-def with_token(repo, run, fake, runner, token):
+@when(parsers.parse('the command runs through "{runner}" with the token "{token}"'), target_fixture="result")
+def with_token(pubtest_ctx, repo, env, fake, runner, token):
     (repo / "infra").mkdir(exist_ok=True)
-    return _wrapper(repo, run, fake, {"BWS_ACCESS_TOKEN": token}, runner, fake / "show")
+    env["BWS_ACCESS_TOKEN"] = token
+    return _wrapper(pubtest_ctx, fake, env, runner, fake / "show")
 
 
-@when(parsers.parse('I run "{runner}" with no token'), target_fixture="result")
-def no_token(repo, run, fake, runner):
-    return _wrapper(repo, run, fake, {"BWS_ACCESS_TOKEN": None}, runner, fake / "show")
+@when(parsers.parse('the command runs through "{runner}" with no token'), target_fixture="result")
+def no_token(pubtest_ctx, repo, env, fake, runner):
+    env["BWS_ACCESS_TOKEN"] = None
+    return _wrapper(pubtest_ctx, fake, env, runner, fake / "show")
 
 
-@when(parsers.parse('I run "{runner}" with the token "{token}" and a command that exits {code:d}'),
+@when(parsers.parse('"{runner}" runs a command that exits {code:d}, with the token "{token}"'),
       target_fixture="result")
-def exits(repo, run, fake, runner, token, code):
-    return _wrapper(repo, run, fake, {"BWS_ACCESS_TOKEN": token}, runner, "sh", "-c", f"exit {code}")
+def exits(pubtest_ctx, repo, env, fake, runner, token, code):
+    env["BWS_ACCESS_TOKEN"] = token
+    return _wrapper(pubtest_ctx, fake, env, runner, "sh", "-c", f"exit {code}")
 
 
-@when(parsers.parse('I run "{runner}" with the token "{token}" and the command "{command}"'),
+@when(parsers.parse('"{runner}" runs the command "{command}", with the token "{token}"'),
       target_fixture="result")
-def missing_command(repo, run, fake, runner, token, command):
-    return _wrapper(repo, run, fake, {"BWS_ACCESS_TOKEN": token}, runner, command)
+def missing_command(pubtest_ctx, repo, env, fake, runner, token, command):
+    env["BWS_ACCESS_TOKEN"] = token
+    return _wrapper(pubtest_ctx, fake, env, runner, command)
 
 
 @given(parsers.parse('the repository has no "{path}"'))

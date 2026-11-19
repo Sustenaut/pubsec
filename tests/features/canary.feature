@@ -100,37 +100,112 @@ Feature: No secret value is ever shown
       | over the deploy channel, before secret-keys   | walk --fulfil --yes --json |
 
   Scenario: An exception holding a value is not shown
-    Then an exception holding a value is not shown
+    Given the deploy world with all well
+    And a need type whose check raises, holding a value
+    And the secret "canary-7f3e"
+    When that need is walked
+    Then the result's "needs.0.state" is "unknown"
+    And the result's "needs.0.summary" is "the check failed (ValueError)"
+    And no secret appears in what it produced
 
   Scenario: A value in the rendered manifests is not shown
-    Then a value in the rendered manifests is not shown
+    Given the deploy world with all well
+    And the rendered manifests hold a Secret with a value
+    When pubdeploy runs "check --offline"
+    Then no value is printed, passed to a program or kept in the journal
 
   Scenario: Every result of the sound fixture is free of values
-    Then every result of the sound fixture is free of values
+    Given the deploy world with all well
+    And the secret "canary-7f3e"
+    When the fixture's needs are walked
+    Then every need came to a result
+    And no secret appears in what it produced
 
   Scenario: A fulfil that raises holding a value is not shown
-    Then a fulfil that raises holding a value is not shown
+    Given the deploy world with all well
+    And a need type whose fulfil raises, holding a value
+    And the secret "canary-7f3e"
+    When that need is walked and fulfilled
+    Then the result's "needs.0.state" is "missing"
+    And the result's "needs.0.details.0" is "fulfil failed: the fulfil failed (ValueError); this is a fault in example.leaky's fulfil: report it"
+    And no secret appears in what it produced
 
   Scenario: Generated values stay in the walk
-    Then generated values stay in the walk
+    Given the deploy world with all well
+    And Bitwarden holds no cookie
+    When pubdeploy runs "walk --fulfil --yes --json"
+    Then the value the fulfil made stays in the walk
 
-  Scenario: The types walked are pubsecs
-    Then the types walked are pubsecs
+  Scenario: The types walked are pubsec's
+    When the need types are loaded
+    Then the result is:
+      """
+      {"bitwarden.secret": {"origin": "pubsec", "package": "pubsec.needs"},
+       "bitwarden.generated": {"origin": "pubsec", "package": "pubsec.needs"},
+       "gcp.service-account-key": {"origin": "pubsec", "package": "pubsec.needs"},
+       "github.secret": {"origin": "pubsec", "package": "pubsec.needs"},
+       "github.variable": {"origin": "pubsec", "package": "pubsec.needs"},
+       "github.deploy-settings": {"origin": "pubsec", "package": "pubsec.needs"},
+       "k8s.secret": {"origin": "pubsec", "package": "pubsec.needs"}}
+      """
 
   Scenario: The hook asks once and says no token
-    Then the hook asks once and says no token
+    Given the deploy world with all well
+    And a terminal that answers the write token
+    When the hook prepares two units with a terminal
+    Then the result's "said" is "[null, null]"
+    And the result's "asked" is "["Bitwarden access token with write access to example (hidden, and not kept): "]"
+    And the result's "units with a writer" is "2"
+    And the result's "writers" is "1"
 
-  Scenario: The hook without a terminal or a project asks nothing
-    Then the hook without a terminal or a project asks nothing
+  Scenario: The hook without a terminal asks nothing
+    Given the deploy world with all well
+    And a terminal that must not be asked
+    When the hook prepares a unit without a terminal
+    Then the result's "said" is "[null]"
+    And the result's "units with a writer" is "0"
+
+  Scenario: The hook without a project asks nothing
+    Given the deploy world with all well
+    And a terminal that must not be asked
+    And the walk names no Bitwarden project
+    When the hook prepares a unit with a terminal
+    Then the result's "said" is "["pubsec: no Bitwarden project to write to: run the walk through ./with-secrets, or where with-secrets.json names one"]"
+    And the result's "units with a writer" is "0"
 
   Scenario: Without a terminal the token comes from the file alone
-    Then without a terminal the token comes from the file alone
+    Given the deploy world with all well
+    And a terminal that must not be asked
+    And a write token file holding the write token, and the token in the environment too
+    When the hook prepares a unit without a terminal
+    Then the result's "said" is "[null]"
+    And the result's "units with a writer" is "1"
+    And the result's "token from the file" is "true"
 
   Scenario: A token file that cannot be read gives no writer
-    Then a token file that cannot be read gives no writer
+    Given the deploy world with all well
+    And a write token file that cannot be read
+    When the hook prepares a unit without a terminal
+    Then the result's "said" is "["pubsec: no Bitwarden write token was given, so nothing is written to Bitwarden"]"
+    And the result's "units with a writer" is "0"
 
   Scenario: The hook with an empty token gives no writer
-    Then the hook with an empty token gives no writer
+    Given the deploy world with all well
+    And a terminal that answers nothing
+    When the hook prepares a unit with a terminal
+    Then the result's "said" is "["pubsec: no Bitwarden write token was given, so nothing is written to Bitwarden"]"
+    And the result's "units with a writer" is "0"
 
   Scenario: The writer finds the secret by its identifier and writes in memory
-    Then the writer finds the secret by its identifier and writes in memory
+    Given Bitwarden's SDK, whose project holds "example-key" as "secret-id"
+    And the secret "canary-7f3e"
+    When the writer writes "example-key"
+    Then the result's "calls" is "[["names", "org-id", "project-id"], ["write", "org-id", "project-id", "example-key", "secret-id"]]"
+    And no secret appears in what it produced
+
+  Scenario: A write Bitwarden refuses holds neither the token nor the value
+    Given Bitwarden's SDK, whose project holds "example-key" as "secret-id"
+    And the secret "canary-7f3e"
+    When the writer writes "refused"
+    Then it is refused, saying "[hidden]"
+    And no secret appears in what it produced

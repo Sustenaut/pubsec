@@ -3,6 +3,10 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   refusal comes before an app exists. The token is asked for, and reaches bws in
   its environment; the key is on no command line and never printed; nothing is written without "yes".
 
+  Background:
+    Given a scratch directory
+    And the program under test is "pubsec"
+
   Scenario: An organization's app goes through the whole flow
     Given a manifest for the org "example-org"
     When I create the app, giving the token "write-token" and answering "yes"
@@ -214,7 +218,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
 
   Scenario: A manifest outside the repository is refused
     Given a manifest for the org "example-org"
-    When I run pubsec "github-app" "create" "/etc/pubsec-manifest.json"
+    When I run "pubsec github-app create /etc/pubsec-manifest.json"
     Then it fails
     And stderr mentions "must be in the working directory or a temporary directory"
 
@@ -232,6 +236,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     Then it succeeds
     And it prints "the-app-client-secret"
     And it does not print "Not kept: client_secret"
+    And stderr does not mention "Not kept: client_secret"
     And the SDK created "the-app-client-id" as "Iv1.x"
     And the SDK created "the-app-client-secret" as "the-client-secret"
     And the SDK wrote 5 secrets with the token "write-token"

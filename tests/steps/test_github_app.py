@@ -20,11 +20,10 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import pytest
-from conftest import pubsec
+from conftest import without_terminal
 from fake_reads import METHODS, READS, REFUSED_LIST
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from pubtest.core import Completed
 
 scenarios("github-app.feature")
 
@@ -336,37 +335,33 @@ def no_bws(tmp_path, env):
     env["PATH"] = str(tmp_path / "bin")
 
 
-def _create(repo, env, flags, lines):
-    argv = [pubsec(), "github-app", "create", *flags, "app.json"]
-    done = subprocess.run(argv, input="".join(f"{line}\n" for line in lines).encode(), cwd=repo,
-                          env={**os.environ, **env}, capture_output=True, timeout=60,
-                          start_new_session=True, check=False)
-    return Completed(argv, done.returncode, done.stdout, done.stderr)
+def _create(pubtest_ctx, binary, repo, flags, lines):
+    return without_terminal(pubtest_ctx, [binary("pubsec"), "github-app", "create", *flags, "app.json"], lines, repo)
 
 
 @when(parsers.parse('I create the app, giving the token "{token}" and answering "{answer}"'), target_fixture="result")
-def create(repo, env, token, answer):
-    return _create(repo, env, [], [token, answer])
+def create(pubtest_ctx, binary, repo, env, token, answer):
+    return _create(pubtest_ctx, binary, repo, [], [token, answer])
 
 
 @when(parsers.parse('I create the app with "{flag}", giving the token "{token}" and answering "{answer}"'), target_fixture="result")
-def create_flag(repo, env, flag, token, answer):
-    return _create(repo, env, [flag], [token, answer])
+def create_flag(pubtest_ctx, binary, repo, env, flag, token, answer):
+    return _create(pubtest_ctx, binary, repo, [flag], [token, answer])
 
 
 @when("I create the app, giving no token", target_fixture="result")
-def create_no_token(repo, env):
-    return _create(repo, env, [], ["", "yes"])
+def create_no_token(pubtest_ctx, binary, repo, env):
+    return _create(pubtest_ctx, binary, repo, [], ["", "yes"])
 
 
 @when(parsers.parse('I create the app with "{flag}", giving nothing'), target_fixture="result")
-def create_nothing(repo, env, flag):
-    return _create(repo, env, [flag], [])
+def create_nothing(pubtest_ctx, binary, repo, env, flag):
+    return _create(pubtest_ctx, binary, repo, [flag], [])
 
 
 @when(parsers.parse('I create the app, giving the tokens "{first}" and "{second}" and answering "{answer}"'), target_fixture="result")
-def create_two(repo, env, first, second, answer):
-    return _create(repo, env, [], [first, answer, second])
+def create_two(pubtest_ctx, binary, repo, env, first, second, answer):
+    return _create(pubtest_ctx, binary, repo, [], [first, answer, second])
 
 
 def _lines(path):
@@ -509,6 +504,3 @@ def code_once(api):
     assert api["codes"] == ["/app-manifests/the-code/conversions"]
 
 
-@then(parsers.parse('it does not print "{text}"'))
-def does_not_print(result, text):
-    assert text not in result.stdout + result.stderr
