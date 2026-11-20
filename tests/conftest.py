@@ -12,6 +12,7 @@ in a conftest.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import subprocess
@@ -20,8 +21,8 @@ from collections.abc import Iterator, MutableMapping
 from pathlib import Path
 
 import pytest
-from pubdeploy.model import Ran
-from pubdeploy.testing.world import FakeWriter, World, gcloud_flags
+from pubdeploy.contract import Ran
+from pubdeploy.testing.world import CANARY, FakeWriter, World
 from pubtest.core import Result
 from pubtest.steps.files import scratch_directory
 from pytest_bdd import given, parsers, then
@@ -102,15 +103,41 @@ def one_value_read(tmp_path, secret):
     assert [r["ids"] for r in _sdk_reads(tmp_path) if r["call"] == "get"] == [[secret]]
 
 
-# --- the deploy world: pubdeploy.testing's, with what pubsec's gcp types ask of gcloud -----------
+# --- the deploy world: pubdeploy.testing's, with gcloud as pubsec's gcp types ask it ---------------
+
+
+def gcloud_flags(args: list[str]) -> dict[str, str]:
+    """A gcloud call's --name=value flags, by name."""
+    return dict(a.removeprefix("--").split("=", 1) for a in args if a.startswith("--") and "=" in a)
+
+
+def key_value(key_id: str) -> str:
+    """A key as Bitwarden keeps it: base64 of its JSON."""
+    return base64.b64encode(json.dumps({"private_key_id": key_id, "private_key": CANARY}).encode()).decode()
 
 
 class PubsecWorld(World):
     """pubdeploy.testing's world, as pubsec's types see it: ./with-secrets
-    under its pubrules name, and gcloud's workload-identity policy, unknown
-    accounts, and keys an organization policy or a role forbids."""
+    under its pubrules name, and gcloud, which only pubsec's gcp types run:
+    its service accounts and their keys, the workload-identity policy,
+    unknown accounts, and keys an organization policy or a role forbids."""
 
     secrets_project = "PUBRULES_SECRETS_PROJECT"
+
+    def __init__(self, root) -> None:
+        super().__init__(root)
+        self.gcloud: dict = {"accounts": {"example-files@example-project.iam.gserviceaccount.com"},
+                             "keys": {}, "missing": False}
+
+    def leaked(self) -> list[str]:
+        """pubdeploy's canary, and every argv gcloud was given."""
+        seen = [json.dumps(c) for c in self.calls.get("gcloud", [])]
+        return [*super().leaked(), *(t for t in seen for v in [CANARY, *self.values, self.token] if v in t)]
+
+    def run_gcloud(self, args: list[str]) -> Ran:
+        """gcloud, as pubsec's types run it: the call kept, then `gcloud_answer`'s answer."""
+        self.calls.setdefault("gcloud", []).append(args)
+        return self.gcloud_answer(args)
 
     def patch(self, monkeypatch) -> None:
         """pubdeploy's patching, then pubsec's own: its types, which hold a
@@ -133,7 +160,7 @@ class PubsecWorld(World):
 
     def gcloud_answer(self, args: list[str]) -> Ran:
         if self.gcloud["missing"]:
-            return super().gcloud_answer(args)
+            return self.accounts_and_keys(args)
         if args[:3] == ["iam", "service-accounts", "get-iam-policy"]:
             if args[3] not in self.gcloud["accounts"]:
                 return Ran(1, "", f"ERROR: NOT_FOUND: Unknown service account {args[3]}")
@@ -150,7 +177,28 @@ class PubsecWorld(World):
             if args[3] == "create" and self.gcloud.get("deny_create"):
                 return Ran(1, "", "ERROR: (gcloud.iam.service-accounts.keys.create) PERMISSION_DENIED: Permission "
                                   "'iam.serviceAccountKeys.create' denied on resource (or it may not exist). 403")
-        return super().gcloud_answer(args)
+        return self.accounts_and_keys(args)
+
+    def accounts_and_keys(self, args: list[str]) -> Ran:
+        """gcloud's answers about service accounts and their keys; a key it
+        makes holds the canary in its private key."""
+        if self.gcloud["missing"]:
+            return Ran(127, "", "gcloud is not installed")
+        if args[:3] == ["iam", "service-accounts", "describe"]:
+            there = args[3] in self.gcloud["accounts"]
+            return Ran(0, args[3]) if there else Ran(1, "", f"NOT_FOUND: Unknown service account {args[3]}")
+        keys = self.gcloud["keys"].setdefault(gcloud_flags(args).get("iam-account", ""), [])
+        if args[3] == "list":
+            return Ran(0, "\n".join(keys) + "\n")
+        if args[3] == "create":
+            key_id = (f"{len(keys) + 1:x}" * 40)[:40]
+            keys.append(key_id)
+            return Ran(0, json.dumps({"type": "service_account", "private_key_id": key_id,
+                                      "private_key": f"-----BEGIN PRIVATE KEY-----\n{CANARY}\n-----END PRIVATE KEY-----"}))
+        if args[3] == "delete":
+            keys.remove(args[4])
+            return Ran(0, "")
+        raise AssertionError(args)
 
 
 @pytest.fixture
@@ -183,3 +231,37 @@ def policy_forbids(world):
 @given(parsers.parse('PUBSEC_GCP_KEYS_GRANTED_IN is "{where}"'))
 def granted_in(world, where):
     world.env["PUBSEC_GCP_KEYS_GRANTED_IN"] = where
+
+
+@given(parsers.parse('Bitwarden holds "{name}" as the live key "{key_id}" of "{account}"'))
+def live_key(world, name, key_id, account):
+    world.env[env_name(name)] = key_value(key_id)
+    world.values.append(world.env[env_name(name)])
+    world.gcloud["keys"][account] = [key_id]
+
+
+@given(parsers.parse('Bitwarden holds "{name}" as a key "{key_id}" the account does not have'))
+def dead_key(world, name, key_id):
+    world.env[env_name(name)] = key_value(key_id)
+    world.values.append(world.env[env_name(name)])
+
+
+@given("gcloud is not installed")
+def no_gcloud(world):
+    world.gcloud["missing"] = True
+
+
+@then(parsers.parse('Bitwarden was given "{name}" as a key of "{account}"'))
+def given_key(world, name, account):
+    key = json.loads(base64.b64decode(world.written[name]))
+    assert key["private_key_id"] in world.gcloud["keys"][account] and CANARY in key["private_key"]
+
+
+@then(parsers.parse('"{account}" has no key'))
+def no_key(world, account):
+    assert world.gcloud["keys"].get(account) == [], world.gcloud["keys"]
+
+
+def env_name(name: str) -> str:
+    """The name ./with-secrets exports a secret under."""
+    return name.upper().replace("-", "_")
