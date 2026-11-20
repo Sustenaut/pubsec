@@ -18,11 +18,8 @@ import json
 import pytest
 from pytest_bdd import given, parsers, scenarios, then, when
 
-from pubdeploy.testing.world import CANARY, run
-from pubdeploy import load
-from pubdeploy.model import Need, Result
-from pubdeploy.registry import types
-from pubdeploy.walk import walk
+from pubdeploy.contract import Need, Result, problems
+from pubdeploy.testing.world import CANARY, run, walk_needs
 
 # The types pubsec offers.
 OURS = {"bitwarden.secret", "bitwarden.generated", "gcp.service-account-key", "github.secret",
@@ -108,28 +105,17 @@ def leaky(world, part):
     world.leaky = Leaky(part)
 
 
-def _kept(world, journal) -> dict:
-    world.journal = journal.document()
-    return world.journal
+LEAKY = Need("example.leaky", "one", {})
 
 
 @when("that need is walked")
 def leaky_walked(ctx, world):
-    need = Need("example.leaky", "one", {})
-    ctx.attempt(lambda: _kept(world, walk({need.id: need}, {"example.leaky": world.leaky}, world.context(),
-                                          service={})))
+    ctx.attempt(lambda: walk_needs(world, [LEAKY], {LEAKY.type: world.leaky}))
 
 
 @when("that need is walked and fulfilled")
 def leaky_fulfilled(ctx, world):
-    from pubdeploy.walk import fulfil  # noqa: PLC0415
-    need = Need("example.leaky", "one", {})
-    kinds = {"example.leaky": world.leaky}
-
-    def walked():
-        context = world.context()
-        return _kept(world, fulfil(walk({need.id: need}, kinds, context, service={}), kinds, context, {need.id}))
-    ctx.attempt(walked)
+    ctx.attempt(lambda: walk_needs(world, [LEAKY], {LEAKY.type: world.leaky}, fulfil=[LEAKY.id]))
 
 
 @given("the rendered manifests hold a Secret with a value")
@@ -140,17 +126,13 @@ def rendered_secret(world):
 
 @when("the fixture's needs are walked")
 def fixture_walked(ctx, world):
-    def walked():
-        context = world.context()
-        plan = load(world.root, world.config, context)
-        world.walked = walk(plan.needs, types(), context, service={})
-        return _kept(world, world.walked)
-    ctx.attempt(walked)
+    ctx.attempt(lambda: walk_needs(world))
 
 
 @then("every need came to a result")
 def every_result(world):
-    assert world.walked.entries and all(isinstance(r, Result) for _, r in world.walked.entries)
+    needs = world.journal["needs"]
+    assert needs and all(n["state"] in ("ready", "missing", "drift", "blocked", "unknown") for n in needs), needs
 
 
 @given("Bitwarden holds no cookie")
@@ -168,13 +150,18 @@ def made_stays(world):
 
 @when("the need types are loaded")
 def types_loaded(ctx):
-    """The seven reach the walk by their entry points, as installed: where each came from, and its package."""
-    from pubdeploy.registry import load as registry  # noqa: PLC0415
+    """The seven reach the walk by their entry points, as installed: where each came from, and its
+    package, each a need type by pubdeploy's contract."""
+    from importlib.metadata import entry_points  # noqa: PLC0415
 
     def loaded():
-        found = registry()
-        return {kind: {"origin": found.origin[kind],
-                       "package": ".".join(type(found.types[kind]).__module__.split(".")[:2])} for kind in OURS}
+        found = {}
+        for point in entry_points(group="sustenaut.needs"):
+            kind = point.load()
+            assert not problems(kind), (point.name, problems(kind))
+            found[kind.type] = {"origin": point.dist.name,
+                                "package": ".".join(type(kind).__module__.split(".")[:2])}
+        return {kind: found[kind] for kind in OURS}
     ctx.attempt(loaded)
 
 

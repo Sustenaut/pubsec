@@ -1,6 +1,7 @@
 Feature: pubsec reaches pubdeploy's walk through the provider contract alone
-  The Context names pubdeploy's README lists under Provider contract, and no
-  import of pubrules or pubdeploy outside the tests.
+  The Context names pubdeploy.contract holds, no import of pubkit or
+  pubdeploy in pubsec's code, and in its tests only pubdeploy.contract and
+  pubdeploy.testing.
 
   Scenario: Only the contract is used
     When the names pubsec's code reads from a Context, and not in the contract, are gathered
@@ -10,6 +11,6 @@ Feature: pubsec reaches pubdeploy's walk through the provider contract alone
     When pubsec's imports of pubkit or pubdeploy are gathered
     Then the result is "[]"
 
-  Scenario: The contract is on pubdeploy's context
-    When the names of the contract that pubdeploy's Context lacks are gathered
+  Scenario: The tests import only the contract and the harness of pubdeploy
+    When the modules of pubdeploy pubsec's tests import, beside the contract and the harness, are gathered
     Then the result is "[]"
