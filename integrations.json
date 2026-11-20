@@ -11,6 +11,13 @@
       "mode": "required"
     },
     {
+      "plugin": "github.actions-oidc",
+      "paths": [
+        ".github/workflows/wheel.yml"
+      ],
+      "mode": "required"
+    },
+    {
       "plugin": "github.app-token",
       "paths": [
         ".github/workflows/main.yml",
