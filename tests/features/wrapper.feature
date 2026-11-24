@@ -28,6 +28,15 @@ Feature: pubsec run runs one command with the repository's secrets in its enviro
     And the command sees "LINEAR_API_KEY" as "lin"
     And the command sees "SLACK_BOT_TOKEN" as "xoxb"
 
+  Scenario: Off a terminal, as in CI, it counts the secrets it read without naming them
+    Given a service whose Terraform takes its secrets as a map of "linear-api-key"
+    And Bitwarden holds "linear-api-key" as "lin" and "slack-bot-token" as "xoxb" in the project "infra"
+    When the command runs through "pubsec run" with the token "tok"
+    Then it succeeds
+    And stderr mentions "From Bitwarden: 2 secrets"
+    And stderr does not mention "SLACK_BOT_TOKEN"
+    And stderr does not mention "slack-bot-token"
+
   Scenario: A token that cannot see the project stops before running anything
     Given a service whose Terraform declares "hcloud_token"
     And Bitwarden holds "HCLOUD_TOKEN" as "h1" and "restic-password" as "r1" in the project "other"

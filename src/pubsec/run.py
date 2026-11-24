@@ -166,12 +166,13 @@ def environment(root: Path) -> dict[str, str]:
             declared.update(m[1] for line in tf.read_text(encoding="utf-8").splitlines()
                             if (m := VARIABLE.fullmatch(line)))
 
-    names = []
+    names: list[str] = []
+    skipped: list[str] = []
     for secret in secrets:
         key, value = _raw(secret.get("key")), _raw(secret.get("value"))
         name = key.translate(UPPER)
         if not value or not NAME.fullmatch(name):
-            print(f"skipping secret '{key}': empty, or not usable as an environment variable name", file=sys.stderr)
+            skipped.append(key)
             continue
         if name.lower() in declared:
             name = f"TF_VAR_{name.lower()}"
@@ -200,8 +201,21 @@ def environment(root: Path) -> dict[str, str]:
         print(f"To Terraform as TF_VAR_secret_values: {found or 'none'}"
               + (f"; not in Bitwarden: {missing}" if missing else ""), file=sys.stderr)
 
-    print(f"From Bitwarden: {' '.join(names) or 'none'}", file=sys.stderr)
+    # A CI log can be public, and the project holds other repositories'
+    # secrets too, so their names are printed only to a person at a terminal.
+    if sys.stderr.isatty():
+        for key in skipped:
+            print(f"skipping secret '{key}': empty, or not usable as an environment variable name", file=sys.stderr)
+        print(f"From Bitwarden: {' '.join(names) or 'none'}", file=sys.stderr)
+    else:
+        if skipped:
+            print(f"skipping {_count(len(skipped))}: empty, or not usable as an environment variable name", file=sys.stderr)
+        print(f"From Bitwarden: {_count(len(names))} (names shown only at a terminal)", file=sys.stderr)
     return env
+
+
+def _count(n: int) -> str:
+    return f"{n} secret" if n == 1 else f"{n} secrets"
 
 
 def main(argv: list[str], root: Path | None = None) -> int:
