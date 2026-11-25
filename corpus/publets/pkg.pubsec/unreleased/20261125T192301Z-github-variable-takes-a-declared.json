@@ -1,4 +1,0 @@
-{
-  "category": "added",
-  "change": "github.variable takes a declared variable's default (the variables block's, version 2; any JSON value): unset or empty, it is ready at its default, shown as default (VALUE), and set to a value equal to it, compared canonically, says so; without one, unset or empty is missing as before"
-}

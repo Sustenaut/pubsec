@@ -1,4 +1,0 @@
-{
-  "category": "internal",
-  "change": "The suite reaches pubdeploy through pubdeploy.contract and pubdeploy.testing alone (a scenario checks it): the contract's Context names come from pubdeploy.contract, the canary walks with walk_needs, and gcloud's fake (accounts, keys, the service-account-key steps) is the suite's own"
-}
