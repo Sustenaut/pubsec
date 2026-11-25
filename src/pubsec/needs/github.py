@@ -6,10 +6,16 @@ through ./with-secrets, and never shown.
 A fulfil sets what the secrets and github_app blocks name, as
 `pubsec app-secrets` does (ctx.send, the value on gh's standard
 input), from the environment ./with-secrets gives. A variable pubrules.json's
-variables block declares is the state file's, so its fulfil only proposes."""
+variables block declares is the state file's, so its fulfil only proposes.
+
+A declared variable may come with its default (`default`, the variables block's,
+version 2: the code's own constant, any JSON value). Unset, or empty as a deploy
+renders one nothing sets, it is ready at its default, which the code then takes; set
+to a value equal to it, compared canonically, it says so."""
 
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from . import Base, Result, at_once, env_name, github_refused, schema, status_of
@@ -112,7 +118,9 @@ class GitHubVariable(GitHubSecret):
     type = "github.variable"
     grade = "auto"
     kind = "variable"
-    schema = schema({"from": FROM, "to": GITHUB_NAME, "environment": ENVIRONMENT, "declared": {"type": "boolean"}})
+    # default: any JSON value, null included, so its presence, not its value, says there is one.
+    schema = schema({"from": FROM, "to": GITHUB_NAME, "environment": ENVIRONMENT, "declared": {"type": "boolean"},
+                     "default": {}})
 
     def grade_for(self, need: Any) -> str:
         return "auto" if need.params.get("from") and not need.params.get("declared") else "propose"
@@ -136,10 +144,20 @@ class GitHubVariable(GitHubSecret):
             if not hasattr(e, "status"):
                 raise
             if status_of(e) == 404:
+                if "default" in need.params:
+                    return Result("ready", f"variable {name} is not set in {where(ctx.slug, env)}: "
+                                           f"default ({shown(need.params['default'])})")
                 return Result("missing", f"variable {name} is not set in {where(ctx.slug, env)}",
                               fix=setter("variable", name, ctx.slug, env, source))
             return github_refused(e, f"variable {name}")
         value = found.get("value") if isinstance(found, dict) else None
+        if "default" in need.params:
+            if not value:
+                return Result("ready", f"variable {name} is empty in {where(ctx.slug, env)}: "
+                                       f"default ({shown(need.params['default'])})")
+            if same(need.params["default"], value):
+                return Result("ready", f"variable {name} is set in {where(ctx.slug, env)}, to its default, "
+                                       f"which leaving it unset would give too")
         if need.params.get("declared") and not value:
             return Result("missing", f"variable {name} is empty in {where(ctx.slug, env)}",
                           fix="give it its value in the state file, then pubrules variables --apply")
@@ -149,6 +167,31 @@ class GitHubVariable(GitHubSecret):
                           fix="./with-secrets ./pubsec app-secrets")
         compared = " and is Bitwarden's" if wanted is not None else ""
         return Result("ready", f"variable {name} is set in {where(ctx.slug, env)}{compared}")
+
+
+def canonical(value: Any) -> str:
+    """A JSON value as one string, however it was spaced or its keys ordered (pubrules'
+    variables.canonical, kept here as pubsec reads no pubrules)."""
+    return json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+
+
+def same(default: Any, value: str) -> bool:
+    """Whether a variable GitHub holds is its default: a string as it is, anything else
+    as the JSON GitHub's string parses to, as a state file sends it."""
+    if isinstance(default, str):
+        return value == default
+    try:
+        return canonical(json.loads(value)) == canonical(default)
+    except ValueError:
+        return False
+
+
+def shown(default: Any) -> str:
+    """A default in a check's line: a string as it is, null as unset, JSON compact. A
+    default is the code's constant, public in pubrules.json, so it may be shown."""
+    if default is None:
+        return "unset"
+    return default if isinstance(default, str) else canonical(default)
 
 
 class DeploySettings(Base):
