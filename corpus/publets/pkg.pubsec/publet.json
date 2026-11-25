@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubsec 0.3.1 is released as v0.3.1 from commit 7a413635a708a08dfdb169ac7aeb10b920de6cfc.",
+      "content": "pubsec 0.4.0 is released as v0.4.0 from commit 8f5f1b6415af80dd44cc2ab63ecfc6a65855897a.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubsec",
-            "0.3.1",
+            "0.4.0",
             "pubsec --version",
-            "pubsec 0.3.1",
-            "v0.3.1",
-            "7a413635a708a08dfdb169ac7aeb10b920de6cfc"
+            "pubsec 0.4.0",
+            "v0.4.0",
+            "8f5f1b6415af80dd44cc2ab63ecfc6a65855897a"
           ]
         ]
       },
-      "scope": "the published release v0.3.1 of pubsec",
+      "scope": "the published release v0.4.0 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "7a413635a708a08dfdb169ac7aeb10b920de6cfc"
+          "revision": "8f5f1b6415af80dd44cc2ab63ecfc6a65855897a"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubsec 0.3.1 was released on 2026-11-19 from commit 7a413635a708a08dfdb169ac7aeb10b920de6cfc with these changes.",
+      "content": "pubsec 0.4.0 was released on 2026-11-25 from commit 8f5f1b6415af80dd44cc2ab63ecfc6a65855897a with these changes.",
       "data": {
         "columns": [
           {
@@ -58,39 +58,31 @@
         "rows": [
           [
             "internal",
-            "The deploy scenarios set PUBRULES_ANY_VERSION, the name pubrules reads, in place of PUBKIT_ANY_VERSION"
+            "The suite reaches pubdeploy through pubdeploy.contract and pubdeploy.testing alone (a scenario checks it): the contract's Context names come from pubdeploy.contract, the canary walks with walk_needs, and gcloud's fake (accounts, keys, the service-account-key steps) is the suite's own"
           ],
           [
-            "internal",
-            "the suite's scenarios are Given/When/Then on pubtest's steps"
-          ],
-          [
-            "internal",
-            "The deploy scenarios run in pubdeploy.testing's world (pubdeploy 0.5.3), extended by a PubsecWorld; pubsec's copy of the harness and its sample service are gone"
-          ],
-          [
-            "internal",
-            "pubdeploy 0.6.0 for the tests, which no longer has patch_pubsec; PubsecWorld's no-op override of it goes"
+            "changed",
+            "pubsec run names the secrets it read (From Bitwarden:) and those it skipped only when stderr is a terminal; off one, as in a CI log that may be public, it gives only their number"
           ],
           [
             "added",
-            "pubsec signing-key restore [NAME ...] [--under DIR] [--dry-run]: each signing key pubrules.json declares that this machine lacks is read from its Bitwarden project (its value alone, with a token that may only read) and written to its declared path, readable by its owner alone; a key already there is never overwritten, a name the project does not hold once fails, and no key or token is printed"
+            "github.variable takes a declared variable's default (the variables block's, version 2; any JSON value): unset or empty, it is ready at its default, shown as default (VALUE), and set to a value equal to it, compared canonically, says so; without one, unset or empty is missing as before"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.3.1 of pubsec",
+      "scope": "the published release v0.4.0 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "7a413635a708a08dfdb169ac7aeb10b920de6cfc"
+          "revision": "8f5f1b6415af80dd44cc2ab63ecfc6a65855897a"
         }
       ]
     }
   },
-  "created": "2026-11-19T00:00:00Z",
+  "created": "2026-11-25T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
