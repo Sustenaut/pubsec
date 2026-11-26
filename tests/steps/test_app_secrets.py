@@ -19,7 +19,8 @@ OTHER_APP = {"id": {"from": "other-app-id", "to": "OTHER_APP_ID"},
              "installation_id": {"from": "other-app-installation-id", "to": "OTHER_APP_INSTALLATION_ID"},
              "key": {"from": "other-app-key", "to": "OTHER_APP_KEY"}}
 MORE = {"OTHER_APP_ID": "5551235", "OTHER_APP_INSTALLATION_ID": "7770002", "OTHER_APP_KEY": KEY.replace("BODY", "BODY2"),
-        "PLAIN_TOKEN": "xoxb-plain-token-value", "PLAIN_USER": "U12345USER"}
+        "PLAIN_TOKEN": "xoxb-plain-token-value", "PLAIN_USER": "U12345USER",
+        "THE_APP_CLIENT_ID": "Iv23liR3RvIw58sFy12M"}
 BLOCK = {"id": {"from": "the-app-id", "to": "THE_APP_ID"},
          "installation_id": {"from": "the-app-installation-id", "to": "THE_APP_INSTALLATION_ID"},
          "key": {"from": "the-app-key", "to": "THE_APP_KEY"}}
@@ -60,6 +61,12 @@ def clone(repo, log, slug):
                    check=True)
 
 
+@given(parsers.parse('a clone of "{slug}" whose github_app block names an app and its client id'))
+def clone_client_id(repo, log, slug):
+    _clone(repo, slug, {"github_app": {**BLOCK, "client_id": {"from": "the-app-client-id",
+                                                              "to": "THE_APP_CLIENT_ID"}}})
+
+
 def _clone(repo, slug, config):
     (repo / "pubrules.json").write_text(json.dumps({"kind": "utility", **config}))
     subprocess.run(["git", "init", "-q", "."], cwd=repo, check=True)
@@ -89,6 +96,11 @@ def clone_one(repo, log, slug, name):
 def has_those(env):
     env.update(VALUES)
     env.update(MORE)
+
+
+@given("Bitwarden has all four values")
+def has_four(env):
+    env.update(VALUES, THE_APP_CLIENT_ID=MORE["THE_APP_CLIENT_ID"])
 
 
 @given("Bitwarden has all three values")

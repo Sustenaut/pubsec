@@ -1,12 +1,13 @@
 """`pubsec app-secrets`: send what this repository's pubrules.json names to it.
 
 A repository names the values, so pubsec names nothing of anyone's. `github_app`
-is one GitHub App's three values, or a list of apps; `secrets` is any others:
+is one GitHub App's values, or a list of apps; `secrets` is any others:
 
     "github_app": {
       "id":              {"from": "some-app-id", "to": "SOME_APP_ID"},
       "installation_id": {"from": "some-app-installation-id", "to": "SOME_APP_INSTALLATION_ID"},
-      "key":             {"from": "some-app-key", "to": "SOME_APP_KEY"}
+      "key":             {"from": "some-app-key", "to": "SOME_APP_KEY"},
+      "client_id":       {"from": "some-app-client-id", "to": "SOME_APP_CLIENT_ID"}
     },
     "secrets": [
       {"from": "some-token", "to": "SOME_TOKEN", "kind": "secret"},
@@ -15,8 +16,8 @@ is one GitHub App's three values, or a list of apps; `secrets` is any others:
     ]
 
 `from` is the secret's name in the Bitwarden project ./with-secrets reads, and
-`to` its name on GitHub. An app's id and installation id go as variables and its
-key as a secret; `kind` says for the others, and `environment`, if given, names the
+`to` its name on GitHub. An app's id, installation id and client id (which may be
+left out) go as variables and its key as a secret; `kind` says for the others, and `environment`, if given, names the
 GitHub environment one goes in, which must exist. They all go to the repository
 `origin` points at and no other. Run it through with-secrets, which puts the
 project's secrets in its environment:
@@ -41,20 +42,26 @@ from typing import Any
 BLOCK = "github_app"
 OTHERS = "secrets"
 KINDS = {"secret", "variable"}
-# Each of the three: how it goes to GitHub, and what its value looks like.
-SLOTS = {"id": "variable", "installation_id": "variable", "key": "secret"}
+# Each app value: how it goes to GitHub, and what its value looks like. The
+# three are required; client_id, which actions/create-github-app-token takes
+# in place of the app's id, may be left out.
+SLOTS = {"id": "variable", "installation_id": "variable", "key": "secret", "client_id": "variable"}
+OPTIONAL = {"client_id"}
+CLIENT_ID = re.compile(r"Iv[A-Za-z0-9.]{4,}")
 FROM = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 TO = re.compile(r"[A-Z_][A-Z0-9_]*")
 ENVIRONMENT = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*")
 
 
 def app_problems(block: Any) -> list[str]:
-    """What is wrong with one app's three values: one phrase each."""
+    """What is wrong with one app's values: one phrase each."""
     if not isinstance(block, dict):
-        return ["it must be an object, with id, installation_id and key"]
-    out = [f"{key} is not a setting; it takes id, installation_id and key"
+        return ["it must be an object, with id, installation_id and key, and may have client_id"]
+    out = [f"{key} is not a setting; it takes id, installation_id, key and client_id"
            for key in sorted(block.keys() - SLOTS.keys())]
     for slot in SLOTS:
+        if slot in OPTIONAL and slot not in block:
+            continue
         given = block.get(slot)
         if not isinstance(given, dict) or set(given) != {"from", "to"}:
             out.append(f"{slot} needs \"from\", its Bitwarden name, and \"to\", its GitHub name")
@@ -103,7 +110,7 @@ def plan(config: dict) -> list[dict]:
     block = config.get(BLOCK, [])
     apps = block if isinstance(block, list) else [block]
     out = [{"from": app[slot]["from"], "to": app[slot]["to"], "kind": kind, "check": slot}
-           for app in apps for slot, kind in SLOTS.items()]
+           for app in apps for slot, kind in SLOTS.items() if slot in app]
     return out + [{**entry, "check": None} for entry in config.get(OTHERS, [])]
 
 
@@ -126,6 +133,8 @@ def wrong_value(slot: str | None, value: str) -> str | None:
         return "is empty"
     if slot in ("id", "installation_id") and not (value.isascii() and value.isdigit()):
         return "is not an id: only digits are expected"
+    if slot == "client_id" and not (value.isascii() and CLIENT_ID.fullmatch(value)):
+        return "is not a client id: it starts Iv, then letters, digits and ."
     if slot == "key" and not (re.search(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", value)
                               and re.search(r"-----END [A-Z ]*PRIVATE KEY-----", value)):
         return "is not a private key: it needs its BEGIN and END lines"

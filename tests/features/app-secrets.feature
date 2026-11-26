@@ -46,6 +46,31 @@ Feature: pubsec app-secrets sends what this repository names to it
       | the-app-installation-id | "٣"        | BAD      the-app-installation-id is not an id |
       | the-app-key             | "nonsense" | BAD      the-app-key is not a private key |
 
+  Scenario: An app's client id goes as a variable with the other three
+    Given a clone of "example-org/thing" whose github_app block names an app and its client id
+    And Bitwarden has all four values
+    When I run "pubsec app-secrets"
+    Then it succeeds
+    And gh set the variable "THE_APP_CLIENT_ID" in "example-org/thing"
+    And gh set the secret "THE_APP_KEY" in "example-org/thing"
+    And gh was called 4 times
+    And no value is printed or on a command line
+
+  Scenario Outline: A client id that is not one stops all four
+    Given a clone of "example-org/thing" whose github_app block names an app and its client id
+    And Bitwarden has all four values
+    But Bitwarden's "the-app-client-id" is <what>
+    When I run "pubsec app-secrets"
+    Then the exit code is 1
+    And it prints "<says>"
+    And gh was called 0 times
+
+    Examples:
+      | what      | says                                        |
+      | missing   | MISSING  the-app-client-id                  |
+      | "5551234" | BAD      the-app-client-id is not a client id |
+      | "Iv 23"   | BAD      the-app-client-id is not a client id |
+
   Scenario: A failed upload is reported, and fails the command
     Given a clone of "example-org/thing" whose github_app block names an app
     And Bitwarden has all three values
