@@ -62,16 +62,21 @@ def app_problems(block: Any) -> list[str]:
     for slot in SLOTS:
         if slot in OPTIONAL and slot not in block:
             continue
-        given = block.get(slot)
-        if not isinstance(given, dict) or set(given) != {"from", "to"}:
-            out.append(f"{slot} needs \"from\", its Bitwarden name, and \"to\", its GitHub name")
-            continue
-        if not isinstance(given["from"], str) or not FROM.fullmatch(given["from"]):
-            out.append(f"{slot}'s \"from\" is not a secret's name")
-        name = given["to"]
-        if not isinstance(name, str) or not TO.fullmatch(name) or name.startswith("GITHUB_"):
-            out.append(f"{slot}'s \"to\" must be upper case letters, digits and _, "
-                       f"not starting GITHUB_")
+        out += slot_problems(slot, block.get(slot))
+    return out
+
+
+def slot_problems(slot: str, given: Any) -> list[str]:
+    """What is wrong with one app value's {"from", "to"}: one phrase each."""
+    if not isinstance(given, dict) or set(given) != {"from", "to"}:
+        return [f"{slot} needs \"from\", its Bitwarden name, and \"to\", its GitHub name"]
+    out = []
+    if not isinstance(given["from"], str) or not FROM.fullmatch(given["from"]):
+        out.append(f"{slot}'s \"from\" is not a secret's name")
+    name = given["to"]
+    if not isinstance(name, str) or not TO.fullmatch(name) or name.startswith("GITHUB_"):
+        out.append(f"{slot}'s \"to\" must be upper case letters, digits and _, "
+                   f"not starting GITHUB_")
     return out
 
 

@@ -102,6 +102,55 @@ owner's. A workflow mints the app's token with
 (its `app-id` is deprecated), and the key. `pubrules sync --check` checks both
 blocks.
 
+## Organization secrets for selected repositories
+
+An app that several repositories share, such as one that reads data across
+the organization, is set once on the organization instead of in each
+repository. The `org_secrets` block in the `pubrules.json` that holds the
+organization's apps names its values, by the same slots as `github_app` (any of
+`id`, `installation_id`, `key` and `client_id`), the organization, and the
+repositories that may read them. It may be a list of such blocks, one per app:
+
+```json
+"org_secrets": {
+  "org": "some-org",
+  "repositories": ["some-repo"],
+  "app": {
+    "client_id": { "from": "some-app-client-id", "to": "SOME_APP_CLIENT_ID" },
+    "key":       { "from": "some-app-key", "to": "SOME_APP_KEY" }
+  }
+}
+```
+
+```sh
+./with-secrets ./pubsec org-secrets --check   # reports how GitHub differs, writes nothing
+./with-secrets ./pubsec org-secrets
+```
+
+As in `app-secrets`, the ids and the client id go as organization variables
+(`vars.SOME_APP_CLIENT_ID`: a client id is no secret, and a variable's value can
+be checked) and the key as an organization secret. Each is visible to selected
+repositories, and the listed ones are added to its selection one at a time,
+so a repository already selected stays and none is ever taken off; to take one
+off, do it on GitHub. One that exists visible to all or to private repositories
+is never narrowed: the run refuses, before writing anything, to change it.
+
+It checks the values as `app-secrets` does (digits, `Iv`, BEGIN and END lines),
+then asks GitHub what it has, shows that, and writes, with no prompt: it only
+sets the named values and adds repositories. A missing value, a repository that
+is not there, or a gh login that may not manage the organization's secrets stops
+it before anything is written. `--check` says, for each, whether it exists, is
+visible to selected repositories, and which listed repositories it is not
+visible to, and for a variable whether its value is Bitwarden's; it exits 1 on
+any difference. A secret's value is never compared, as GitHub never returns one.
+
+It runs as your `gh` login, which must be an organization owner's with the
+`admin:org` scope (`gh auth refresh -h github.com -s admin:org`). A secret's value
+reaches `gh secret set --no-store` on its standard input, which seals it to the
+organization's public key and prints only the sealed box, and that reaches `gh api`
+on its standard input; `gh secret set --org --repos` is not used, as it replaces
+the selection. No value is printed or on a command line.
+
 ## Creating a GitHub App
 
 `pubsec github-app create` makes an app with GitHub's

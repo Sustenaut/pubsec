@@ -23,7 +23,8 @@
         ".github/workflows/main.yml",
         ".github/workflows/pr.yml",
         "src/pubsec/app_secrets.py",
-        "src/pubsec/github_app.py"
+        "src/pubsec/github_app.py",
+        "src/pubsec/org_secrets.py"
       ],
       "mode": "required"
     },
@@ -33,7 +34,8 @@
         ".github/workflows/wheel.yml",
         "src/pubsec/app_secrets.py",
         "src/pubsec/github_app.py",
-        "src/pubsec/needs/"
+        "src/pubsec/needs/",
+        "src/pubsec/org_secrets.py"
       ],
       "mode": "required"
     },
