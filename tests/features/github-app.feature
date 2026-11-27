@@ -1,7 +1,8 @@
 Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   The manifest is the repository's, so pubsec names nothing of anyone's. A
   refusal comes before an app exists. The token is asked for, and reaches bws in
-  its environment; the key is on no command line and never printed; nothing is written without "yes".
+  its environment; the key is on no command line and never printed. The values are written with no
+  prompt: a name already in the project is refused before there is an app, unless --replace says to overwrite it.
 
   Background:
     Given a scratch directory
@@ -9,7 +10,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
 
   Scenario: An organization's app goes through the whole flow
     Given a manifest for the org "example-org"
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And the browser posted to "https://github.com/organizations/example-org/settings/apps/new"
     And GitHub was sent the manifest with a redirect to 127.0.0.1 and no pubrules section
@@ -28,7 +29,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
 
   Scenario: A user's app goes to the user's own settings
     Given a manifest for the user "someone"
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And the browser posted to "https://github.com/settings/apps/new"
     And the SDK wrote 4 secrets with the token "write-token"
@@ -36,27 +37,27 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: The installation that counts is the owner's, once it is there
     Given a manifest for the org "example-org"
     And the first look finds no installation, and the next one on another account too
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And the SDK created "the-app-installation-id" as "7770001"
 
   Scenario: An installation on every repository says so, and where to narrow it
     Given a manifest for the org "example-org"
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And it prints "It reaches ALL of example-org's repositories"
     And it prints "https://github.com/organizations/example-org/settings/installations/7770001"
 
   Scenario: A user's installation is narrowed in the user's own settings
     Given a manifest for the user "someone"
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And it prints "https://github.com/settings/installations/7770001"
 
   Scenario: An installation on selected repositories lists them
     Given a manifest for the org "example-org"
     And the app is installed on the selected repositories "example-org/two" and "example-org/one"
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And it prints "It reaches 2 selected repositories: example-org/one, example-org/two."
     And the list was asked for with the installation's own token
@@ -65,7 +66,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: A long list of selected repositories is read to its end
     Given a manifest for the org "example-org"
     And the app is installed on 150 selected repositories
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And it prints "It reaches 150 selected repositories:"
     And it prints "example-org/repo-149"
@@ -74,7 +75,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     Given a manifest for the org "example-org"
     And the app is installed on the selected repositories "example-org/one" and "example-org/two"
     And GitHub refuses the installation token
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And it prints "could not list them"
     And it prints "https://github.com/organizations/example-org/settings/installations/7770001"
@@ -83,14 +84,14 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: An installation that does not say what it reaches is not taken for either
     Given a manifest for the org "example-org"
     And GitHub does not say which repositories the app reaches
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And it prints "GitHub did not say which repositories it reaches"
 
   Scenario: A callback with the wrong state is refused, and the real one still works
     Given a manifest for the org "example-org"
     And the browser first comes back with the wrong state
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And the wrong state was answered with 400
     And GitHub was given the code once
@@ -109,7 +110,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: A name already in the project is refused before there is an app
     Given a manifest for the org "example-org"
     And Bitwarden already has "the-app-app-key"
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then the exit code is 1
     And it prints "already in project the-project: the-app-app-key"
     And Bitwarden gave pubsec no secret's value
@@ -119,9 +120,11 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: --replace edits what is there and creates what is not
     Given a manifest for the org "example-org"
     And Bitwarden already has "the-app-app-key"
-    When I create the app with "--replace", giving the token "write-token" and answering "yes"
+    When I create the app with "--replace", giving the token "write-token"
     Then it succeeds
     And the SDK edited the existing "the-app-app-key" to the key
+    And it prints "replaced the-app-app-key"
+    And it prints "created  the-app-app-id"
     And the SDK created "the-app-app-id" as "5551234"
     And the SDK wrote 4 secrets with the token "write-token"
     And neither the key nor the token is printed
@@ -129,25 +132,21 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: --replace will not guess between two secrets of one name
     Given a manifest for the org "example-org"
     And Bitwarden already has "the-app-app-key" twice
-    When I create the app with "--replace", giving the token "write-token" and answering "yes"
+    When I create the app with "--replace", giving the token "write-token"
     Then the exit code is 1
     And it prints "more than one secret"
     And no browser opened
 
-  Scenario Outline: Anything but yes writes nothing, and says what is left to do
+  Scenario: New items are created with no prompt, and the run says which
     Given a manifest for the org "example-org"
-    When I create the app, giving the token "write-token" and answering "<answer>"
-    Then the exit code is 1
-    And it prints "Nothing was written"
-    And it prints "https://github.com/organizations/example-org/settings/apps/the-app"
-    And the SDK wrote 0 secrets with the token "write-token"
+    When I create the app, giving the token "write-token"
+    Then it succeeds
+    And it prints "created  the-app-app-key"
+    And it prints "created  the-app-client-id"
+    And it does not print "yes"
+    And it does not print "replaced"
+    And the SDK wrote 4 secrets with the token "write-token"
     And neither the key nor the token is printed
-
-    Examples:
-      | answer |
-      | no     |
-      | YES    |
-      | y      |
 
   Scenario: No token means no app
     Given a manifest for the org "example-org"
@@ -158,7 +157,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
 
   Scenario: A token that sees no such project means no app
     Given a manifest whose project is "another-project"
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then the exit code is 1
     And it prints "It sees: the-project"
     And no browser opened
@@ -166,7 +165,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: A failed write hides the key Bitwarden echoed, and the rest go with another token
     Given a manifest for the org "example-org"
     And Bitwarden refuses writes with the token "read-token", printing what it was given
-    When I create the app, giving the tokens "read-token" and "write-token" and answering "yes"
+    When I create the app, giving the tokens "read-token" and "write-token"
     Then it succeeds
     And it prints "FAILED   the-app-app-key"
     And the SDK wrote 4 secrets with the token "write-token"
@@ -175,7 +174,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: Giving up after a failed write says the key is gone
     Given a manifest for the org "example-org"
     And Bitwarden refuses writes with the token "read-token", printing what it was given
-    When I create the app, giving the token "read-token" and answering "yes"
+    When I create the app, giving the token "read-token"
     Then the exit code is 1
     And it prints "Not written: the-app-app-id, the-app-app-key, the-app-installation-id"
     And it prints "make a new one at https://github.com/organizations/example-org/settings/apps/the-app"
@@ -184,7 +183,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: GitHub refusing the code ends the run, with nothing written
     Given a manifest for the org "example-org"
     And GitHub refuses the code
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then the exit code is 1
     And it prints "GitHub answered the manifest's code with 404"
     And the SDK wrote 0 secrets with the token "write-token"
@@ -192,14 +191,14 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: A missing bws is said plainly
     Given a manifest for the org "example-org"
     And bws is not installed
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then the exit code is 1
     And it prints "bws is not installed"
     And no browser opened
 
   Scenario Outline: A wrong manifest is refused
     Given the manifest reads <manifest>
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then the exit code is 1
     And it prints "<says>"
     And no browser opened
@@ -227,14 +226,14 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: An SDK that won't install stops before an app exists
     Given a manifest for the org "example-org"
     And the SDK is not installed, and uv refuses to install it
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then the exit code is 1
     And GitHub was given no code
     And it prints "could not be installed"
 
   Scenario: An app that signs people in keeps its OAuth client in the same write
     Given a manifest for the org "example-org" that keeps its OAuth client
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And it prints "the-app-client-secret"
     And it does not print "Not kept: client_secret"
@@ -246,7 +245,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
 
   Scenario: Without the setting, the client secret is still not kept
     Given a manifest for the org "example-org"
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And it prints "Not kept: client_secret and webhook_secret"
     And the SDK wrote 4 secrets with the token "write-token"
@@ -254,7 +253,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: A client name already in the project is refused before there is an app
     Given a manifest for the org "example-org" that keeps its OAuth client
     And Bitwarden already has "the-app-client-secret"
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then the exit code is 1
     And it prints "already in project the-project: the-app-client-secret"
     And no browser opened
@@ -262,14 +261,14 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
   Scenario: GitHub giving no client secret writes the other four and says so
     Given a manifest for the org "example-org" that keeps its OAuth client
     And GitHub's answer has no client secret
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then it succeeds
     And it prints "no OAuth client secret"
     And the SDK wrote 4 secrets with the token "write-token"
 
   Scenario: keep_oauth_client must be true or false
     Given the manifest reads {"name": "a", "url": "b", "pubrules": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s", "keep_oauth_client": "yes"}}
-    When I create the app, giving the token "write-token" and answering "yes"
+    When I create the app, giving the token "write-token"
     Then the exit code is 1
     And it prints "must be true or false"
     And no browser opened

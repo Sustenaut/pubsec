@@ -24,12 +24,14 @@ with write access, and look for the names in the project. Then a page on
 127.0.0.1 posts the manifest to GitHub, GitHub redirects back with a code, and
 the code becomes the app and its key. The browser opens the app's install page,
 and the app's own key is used to watch for the installation, and to say which
-repositories it reaches. Last, typing "yes"
+repositories it reaches. Last, with no prompt, it
 writes `<prefix>-app-id`, `<prefix>-app-key`, `<prefix>-installation-id` and
 `<prefix>-client-id`, which actions/create-github-app-token takes as
 `client-id`, and with `"keep_oauth_client": true` in the section,
 `<prefix>-client-secret`: the client secret GitHub makes with the app, which
-an app that signs people in needs, and which is otherwise dropped.
+an app that signs people in needs, and which is otherwise dropped. It says
+which it created and which it replaced; a name already in the project is
+replaced only with --replace, and is otherwise refused before there is an app.
 
 The token is only ever asked for, never read from a file or kept. It reaches bws,
 which finds the project, in its environment, and Bitwarden's SDK, which looks the
@@ -430,7 +432,7 @@ def write_all(token: str, organization: str, project: str, values: dict[str, str
             except WriteFailed as error:
                 print(f"  FAILED   {name}: {error}")
             else:
-                print(f"  wrote    {name}")
+                print(f"  {'replaced' if ids[name] else 'created '} {name}")
                 left.remove(name)
         if not left:
             return []
@@ -490,19 +492,10 @@ def create(path: Path, replace: bool, dry_run: bool) -> int:
         values[names["client-id"]] = str(app["client_id"])
     if oauth:
         values[names["client-secret"]] = str(app["client_secret"])
-    print(f"To write in project {plan.project}:")
-    for name, secret in ids.items():
-        if name not in values:
-            continue
-        print(f"  {'replace' if secret else 'create '}  {name}")
-    try:
-        answer = input('Type "yes" to write them: ')
-    except EOFError:
-        answer = ""
-    if answer.strip() != "yes":
-        print(f"Nothing was written, and the key is gone with this run. Make a new one, or delete the "
-              f"app, at {plan.settings_url(app['slug'])}")
-        return 1
+    # No prompt: the names were checked against the project before the app was
+    # made, and only --replace overwrites one, so what is written here is what
+    # the plan showed.
+    print(f"Writing in project {plan.project}:")
     if left := write_all(token, organization, project, values, ids):
         print(f"Not written: {', '.join(left)}. Any key among them is gone with this run: make a new "
               f"one at {plan.settings_url(app['slug'])}")

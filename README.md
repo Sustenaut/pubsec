@@ -153,8 +153,9 @@ It goes in this order, so that a refusal comes before there is an app to clean u
    the owner's settings, then GitHub Apps, then Configure beside the app, and pick
    "Only select repositories"; the run has printed the link. The installation's id
    stays the same, so this can wait until after the run.
-6. It shows what it will write, and writes only when you type `yes`. If a write
-   fails it offers to try the ones left with another token.
+6. It writes them, with no prompt, and says which it created and which it
+   replaced: step 3 already refused any name in the project unless `--replace`
+   was given. If a write fails it offers to try the ones left with another token.
 
 The key is never printed or written to disk: it stays in memory, so if the run
 ends before it is written, it is gone, and pubsec gives the app's settings page,
