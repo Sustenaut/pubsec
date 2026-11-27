@@ -18,7 +18,8 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     And the SDK created "the-app-app-id" as "5551234"
     And the SDK created "the-app-installation-id" as "7770001"
     And the SDK created "the-app-app-key" as the key
-    And the SDK wrote 3 secrets with the token "write-token"
+    And the SDK created "the-app-client-id" as "Iv1.x"
+    And the SDK wrote 4 secrets with the token "write-token"
     And Bitwarden gave pubsec no secret's value
     And neither the key nor the token is printed
     And the token is on no command line
@@ -30,7 +31,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     When I create the app, giving the token "write-token" and answering "yes"
     Then it succeeds
     And the browser posted to "https://github.com/settings/apps/new"
-    And the SDK wrote 3 secrets with the token "write-token"
+    And the SDK wrote 4 secrets with the token "write-token"
 
   Scenario: The installation that counts is the owner's, once it is there
     Given a manifest for the org "example-org"
@@ -77,7 +78,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     Then it succeeds
     And it prints "could not list them"
     And it prints "https://github.com/organizations/example-org/settings/installations/7770001"
-    And the SDK wrote 3 secrets with the token "write-token"
+    And the SDK wrote 4 secrets with the token "write-token"
 
   Scenario: An installation that does not say what it reaches is not taken for either
     Given a manifest for the org "example-org"
@@ -99,6 +100,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     When I create the app with "--dry-run", giving nothing
     Then it succeeds
     And it prints "the-app-app-key"
+    And it prints "the-app-client-id"
     And it prints "the-project"
     And it prints "--dry-run: no app was made and nothing was written."
     And no browser opened
@@ -121,7 +123,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     Then it succeeds
     And the SDK edited the existing "the-app-app-key" to the key
     And the SDK created "the-app-app-id" as "5551234"
-    And the SDK wrote 3 secrets with the token "write-token"
+    And the SDK wrote 4 secrets with the token "write-token"
     And neither the key nor the token is printed
 
   Scenario: --replace will not guess between two secrets of one name
@@ -167,7 +169,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     When I create the app, giving the tokens "read-token" and "write-token" and answering "yes"
     Then it succeeds
     And it prints "FAILED   the-app-app-key"
-    And the SDK wrote 3 secrets with the token "write-token"
+    And the SDK wrote 4 secrets with the token "write-token"
     And neither the key nor the token is printed
 
   Scenario: Giving up after a failed write says the key is gone
@@ -247,7 +249,7 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     When I create the app, giving the token "write-token" and answering "yes"
     Then it succeeds
     And it prints "Not kept: client_secret and webhook_secret"
-    And the SDK wrote 3 secrets with the token "write-token"
+    And the SDK wrote 4 secrets with the token "write-token"
 
   Scenario: A client name already in the project is refused before there is an app
     Given a manifest for the org "example-org" that keeps its OAuth client
@@ -257,13 +259,13 @@ Feature: pubsec github-app create makes an app and puts its values in Bitwarden
     And it prints "already in project the-project: the-app-client-secret"
     And no browser opened
 
-  Scenario: GitHub giving no client secret writes the other three and says so
+  Scenario: GitHub giving no client secret writes the other four and says so
     Given a manifest for the org "example-org" that keeps its OAuth client
     And GitHub's answer has no client secret
     When I create the app, giving the token "write-token" and answering "yes"
     Then it succeeds
-    And it prints "no OAuth client id and secret"
-    And the SDK wrote 3 secrets with the token "write-token"
+    And it prints "no OAuth client secret"
+    And the SDK wrote 4 secrets with the token "write-token"
 
   Scenario: keep_oauth_client must be true or false
     Given the manifest reads {"name": "a", "url": "b", "pubrules": {"org": "o", "bitwarden_project": "p", "secret_prefix": "s", "keep_oauth_client": "yes"}}

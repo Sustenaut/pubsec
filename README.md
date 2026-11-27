@@ -63,14 +63,16 @@ it may not run, and 1, before anything runs, for a setting it can't use.
 ## Sending secrets to a repository
 
 A repository names the values it needs in its `pubrules.json`. A GitHub App has
-three, in `github_app`, which may also be a list of apps. `secrets` lists any
+three, and may have a fourth, its client id, in `github_app`, which may also be
+a list of apps. `secrets` lists any
 others, each with a `kind` of `secret` or `variable`:
 
 ```json
 "github_app": {
   "id":              { "from": "some-app-id", "to": "SOME_APP_ID" },
   "installation_id": { "from": "some-app-installation-id", "to": "SOME_APP_INSTALLATION_ID" },
-  "key":             { "from": "some-app-key", "to": "SOME_APP_KEY" }
+  "key":             { "from": "some-app-key", "to": "SOME_APP_KEY" },
+  "client_id":       { "from": "some-app-client-id", "to": "SOME_APP_CLIENT_ID" }
 },
 "secrets": [
   { "from": "some-token", "to": "SOME_TOKEN", "kind": "secret" },
@@ -80,8 +82,8 @@ others, each with a `kind` of `secret` or `variable`:
 ```
 
 `from` is the secret's name in the Bitwarden project `./with-secrets` reads, and
-`to` its name on GitHub. An app's id and installation id go as variables and its
-key as a secret, on the repository `origin` points at and no other. `environment`,
+`to` its name on GitHub. An app's id, installation id and client id go as
+variables and its key as a secret, on the repository `origin` points at and no other. `environment`,
 on an entry in `secrets`, puts it in that GitHub environment, which must already
 exist, instead of the repository's own:
 
@@ -91,16 +93,20 @@ exist, instead of the repository's own:
 ```
 
 It writes nothing until every one is there and looks right (digits for an app's
-ids, BEGIN and END lines for its key, and not empty for the others). It prints names and lengths, never a value,
+ids, `Iv` and then letters, digits and `.` for its client id, BEGIN and END
+lines for its key, and not empty for the others). It prints names and lengths, never a value,
 and each value reaches `gh` on its standard input. An app installed on several
 owners has a different installation id on each, so each repository names its own
-owner's. `pubrules sync --check` checks both blocks.
+owner's. A workflow mints the app's token with
+`actions/create-github-app-token`, which takes the client id as `client-id`
+(its `app-id` is deprecated), and the key. `pubrules sync --check` checks both
+blocks.
 
 ## Creating a GitHub App
 
 `pubsec github-app create` makes an app with GitHub's
 [manifest flow](https://docs.github.com/en/apps/sharing-github-apps/registering-a-github-app-from-a-manifest)
-and puts its three values in Bitwarden, under names `pubsec app-secrets` can then
+and puts its four values in Bitwarden, under names `pubsec app-secrets` can then
 send on. The manifest is the repository's own: GitHub's fields, and a `pubrules`
 section GitHub never sees (the name it had when this command was pubrules's),
 naming the owner (`org` or `user`), the Bitwarden project (its name or id) and
@@ -127,8 +133,8 @@ the prefix of the secrets' names:
 
 It goes in this order, so that a refusal comes before there is an app to clean up:
 
-1. It shows the app, the project and the three names: `some-app-app-id`,
-   `some-app-app-key` and `some-app-installation-id`. `--dry-run` ends here.
+1. It shows the app, the project and the four names: `some-app-app-id`,
+   `some-app-app-key`, `some-app-installation-id` and `some-app-client-id`. `--dry-run` ends here.
 2. It asks for a Bitwarden access token with write access to the project, at a
    hidden prompt. It is never read from `.env` or a file and never kept, and it
    reaches `bws` only in its environment. `./with-secrets`' read-only token will
@@ -159,12 +165,11 @@ written with Bitwarden's SDK, which takes them in memory, so the key is on no co
 line (see "Making a service account key" for how it is installed).
 
 An app that signs people in (it has `callback_urls`, and its server swaps an OAuth
-code for a user's token) needs its client id and that client secret. Add
-`"keep_oauth_client": true` to the `pubrules` section, and step 1 lists two more
-names, `some-app-client-id` and `some-app-client-secret`. Step 6 writes them with
-the other three, from GitHub's own answer, so there is nothing to copy from the
-app's settings page. If GitHub's answer has none, pubsec says so and writes the
-other three.
+code for a user's token) needs that client secret too. Add
+`"keep_oauth_client": true` to the `pubrules` section, and step 1 lists one more
+name, `some-app-client-secret`. Step 6 writes it with the other four, from
+GitHub's own answer, so there is nothing to copy from the app's settings page.
+If GitHub's answer has none, pubsec says so and writes the other four.
 
 A pull token for `ghcr.io` is no app's to give, so it stays a manual step.
 
