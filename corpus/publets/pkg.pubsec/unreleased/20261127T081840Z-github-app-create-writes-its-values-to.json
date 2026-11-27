@@ -1,0 +1,4 @@
+{
+  "category": "changed",
+  "change": "github-app create writes its values to Bitwarden with no typed yes: names already in the project are still refused before an app exists unless --replace, --dry-run still does nothing, and the run says which it created and which it replaced"
+}

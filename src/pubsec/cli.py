@@ -2,6 +2,7 @@
 
     pubsec run [--cwd DIR] -- COMMAND [ARGS...]
     pubsec app-secrets [--check]
+    pubsec org-secrets [--check]
     pubsec github-app create [--replace] [--dry-run] MANIFEST
     pubsec service-account-key create --account EMAIL --secret NAME [--bitwarden-project NAME] [--replace] [--dry-run]
     pubsec signing-key backup [--under DIR] [--dry-run]
@@ -92,6 +93,10 @@ def main(argv: list[str] | None = None) -> int:
     p = commands.add_parser("app-secrets", help="send the secrets this repository's pubrules.json "
                                                 "names to it, through ./with-secrets")
     p.add_argument("--check", action="store_true", help="check the values, and send nothing")
+    p = commands.add_parser("org-secrets", help="set the organization secrets and variables pubrules.json's "
+                                                "org_secrets names, visible to the repositories it lists, "
+                                                "through ./with-secrets")
+    p.add_argument("--check", action="store_true", help="report how GitHub differs, and write nothing")
     p = commands.add_parser("github-app", help="make a GitHub App from a manifest, and put its "
                                                "values in Bitwarden")
     github_app = p.add_subparsers(dest="github_app_command", required=True)
@@ -134,6 +139,9 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "app-secrets":
         from .app_secrets import run as app_secrets  # noqa: PLC0415
         return app_secrets(read_config(root), args.check)
+    if args.command == "org-secrets":
+        from .org_secrets import run as org_secrets  # noqa: PLC0415
+        return org_secrets(read_config(root), args.check)
     if args.command == "github-app":
         from .github_app import run as github_app  # noqa: PLC0415
         return github_app(confined(args.manifest, "the manifest"), args.replace, args.dry_run)

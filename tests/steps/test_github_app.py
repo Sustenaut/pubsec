@@ -339,19 +339,20 @@ def _create(pubtest_ctx, binary, repo, flags, lines):
     return without_terminal(pubtest_ctx, [binary("pubsec"), "github-app", "create", *flags, "app.json"], lines, repo)
 
 
-@when(parsers.parse('I create the app, giving the token "{token}" and answering "{answer}"'), target_fixture="result")
-def create(pubtest_ctx, binary, repo, env, token, answer):
-    return _create(pubtest_ctx, binary, repo, [], [token, answer])
+@when(parsers.parse('I create the app, giving the token "{token}"'), target_fixture="result")
+def create(pubtest_ctx, binary, repo, env, token):
+    """Standard input holds the token and ends: a prompt after it would read nothing."""
+    return _create(pubtest_ctx, binary, repo, [], [token])
 
 
-@when(parsers.parse('I create the app with "{flag}", giving the token "{token}" and answering "{answer}"'), target_fixture="result")
-def create_flag(pubtest_ctx, binary, repo, env, flag, token, answer):
-    return _create(pubtest_ctx, binary, repo, [flag], [token, answer])
+@when(parsers.parse('I create the app with "{flag}", giving the token "{token}"'), target_fixture="result")
+def create_flag(pubtest_ctx, binary, repo, env, flag, token):
+    return _create(pubtest_ctx, binary, repo, [flag], [token])
 
 
 @when("I create the app, giving no token", target_fixture="result")
 def create_no_token(pubtest_ctx, binary, repo, env):
-    return _create(pubtest_ctx, binary, repo, [], ["", "yes"])
+    return _create(pubtest_ctx, binary, repo, [], [""])
 
 
 @when(parsers.parse('I create the app with "{flag}", giving nothing'), target_fixture="result")
@@ -359,9 +360,9 @@ def create_nothing(pubtest_ctx, binary, repo, env, flag):
     return _create(pubtest_ctx, binary, repo, [flag], [])
 
 
-@when(parsers.parse('I create the app, giving the tokens "{first}" and "{second}" and answering "{answer}"'), target_fixture="result")
-def create_two(pubtest_ctx, binary, repo, env, first, second, answer):
-    return _create(pubtest_ctx, binary, repo, [], [first, answer, second])
+@when(parsers.parse('I create the app, giving the tokens "{first}" and "{second}"'), target_fixture="result")
+def create_two(pubtest_ctx, binary, repo, env, first, second):
+    return _create(pubtest_ctx, binary, repo, [], [first, second])
 
 
 def _lines(path):
