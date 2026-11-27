@@ -2,7 +2,7 @@
   "claims": {
     "identity": {
       "class": "archival",
-      "content": "pubsec 0.4.0 is released as v0.4.0 from commit 8f5f1b6415af80dd44cc2ab63ecfc6a65855897a.",
+      "content": "pubsec 0.4.1 is released as v0.4.1 from commit a5825739a6788cef053c62aff1b9ae4d0d480f45.",
       "data": {
         "columns": [
           {
@@ -27,25 +27,25 @@
         "rows": [
           [
             "pubsec",
-            "0.4.0",
+            "0.4.1",
             "pubsec --version",
-            "pubsec 0.4.0",
-            "v0.4.0",
-            "8f5f1b6415af80dd44cc2ab63ecfc6a65855897a"
+            "pubsec 0.4.1",
+            "v0.4.1",
+            "a5825739a6788cef053c62aff1b9ae4d0d480f45"
           ]
         ]
       },
-      "scope": "the published release v0.4.0 of pubsec",
+      "scope": "the published release v0.4.1 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "8f5f1b6415af80dd44cc2ab63ecfc6a65855897a"
+          "revision": "a5825739a6788cef053c62aff1b9ae4d0d480f45"
         }
       ]
     },
     "release": {
       "class": "archival",
-      "content": "pubsec 0.4.0 was released on 2026-11-25 from commit 8f5f1b6415af80dd44cc2ab63ecfc6a65855897a with these changes.",
+      "content": "pubsec 0.4.1 was released on 2026-11-27 from commit a5825739a6788cef053c62aff1b9ae4d0d480f45 with these changes.",
       "data": {
         "columns": [
           {
@@ -57,32 +57,24 @@
         ],
         "rows": [
           [
-            "internal",
-            "The suite reaches pubdeploy through pubdeploy.contract and pubdeploy.testing alone (a scenario checks it): the contract's Context names come from pubdeploy.contract, the canary walks with walk_needs, and gcloud's fake (accounts, keys, the service-account-key steps) is the suite's own"
-          ],
-          [
-            "changed",
-            "pubsec run names the secrets it read (From Bitwarden:) and those it skipped only when stderr is a terminal; off one, as in a CI log that may be public, it gives only their number"
-          ],
-          [
             "added",
-            "github.variable takes a declared variable's default (the variables block's, version 2; any JSON value): unset or empty, it is ready at its default, shown as default (VALUE), and set to a value equal to it, compared canonically, says so; without one, unset or empty is missing as before"
+            "app-secrets sends an app's client_id, when its github_app block names one, as a variable, checked to start Iv; github-app create always writes <prefix>-client-id, from GitHub's answer, for actions/create-github-app-token's client-id (keep_oauth_client now adds only the client secret)"
           ]
         ]
       },
       "depends": [
         "#identity"
       ],
-      "scope": "the published release v0.4.0 of pubsec",
+      "scope": "the published release v0.4.1 of pubsec",
       "sources": [
         {
           "ref": "pubsec",
-          "revision": "8f5f1b6415af80dd44cc2ab63ecfc6a65855897a"
+          "revision": "a5825739a6788cef053c62aff1b9ae4d0d480f45"
         }
       ]
     }
   },
-  "created": "2026-11-25T00:00:00Z",
+  "created": "2026-11-27T00:00:00Z",
   "sections": [
     {
       "heading": "Identity",
