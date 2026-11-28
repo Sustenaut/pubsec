@@ -1,9 +1,11 @@
 # The functional suite's direct dependencies. Exact pins only; the resolved
 # set with hashes lives in requirements.lock. Regenerate it with `pubrules lock`.
+# The steps and plugin the suite runs with; the nightly moves the pin.
+pubtestrules==0.4.0
 -r requirements-pubrules.txt
 # `make functional` measures the suite, the `pubsec` processes it starts included.
 coverage==7.16.2
 # The deploy scenarios' fakes read the manifests a fulfil applies.
 PyYAML==6.0.3
 # pubdeploy, whose walk the deploy scenarios run pubsec's types through.
-pubdeploy @ https://github.com/Sustenaut/pubdeploy/releases/download/v0.6.1/pubdeploy-0.6.1-py3-none-any.whl
+pubdeploy @ https://github.com/Sustenaut/pubdeploy/releases/download/v0.8.2/pubdeploy-0.8.2-py3-none-any.whl
